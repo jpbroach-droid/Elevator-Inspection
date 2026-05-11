@@ -1,0 +1,3956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elevator Inspector Field Guide — A17.2 Periodic Tests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0f15;
+    --surface: #131a24;
+    --surface-2: #1a2330;
+    --border: #2a3441;
+    --border-bright: #3d4a5c;
+    --text: #e8edf3;
+    --text-dim: #8a96a7;
+    --text-faint: #5a6573;
+    --amber: #ffb800;
+    --amber-dim: #b88500;
+    --pass: #34d399;
+    --pass-bg: rgba(52, 211, 153, 0.12);
+    --fail: #f87171;
+    --fail-bg: rgba(248, 113, 113, 0.12);
+    --info: #60a5fa;
+    --pending: #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(180deg, #0f1620 0%, #0b0f15 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 24px 20px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+  }
+  .header-inner { max-width: 1200px; margin: 0 auto; }
+  .stripe {
+    height: 6px;
+    background: repeating-linear-gradient(45deg, var(--amber) 0 12px, #000 12px 24px);
+    margin: -24px -20px 16px;
+  }
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(28px, 5vw, 44px);
+    letter-spacing: 0.04em;
+    line-height: 1;
+    color: var(--text);
+  }
+  h1 .accent { color: var(--amber); }
+  .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-dim);
+    margin-top: 8px;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-top: 18px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: 0 0 auto;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 0.08em;
+    padding: 12px 20px;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.15s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--amber); }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--amber);
+  }
+
+  /* SUBTABS (Cat 1 / Cat 5) */
+  .subtabs {
+    display: flex;
+    gap: 8px;
+    margin: 20px 0 16px;
+    padding: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    width: fit-content;
+  }
+  .subtab {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    padding: 8px 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .subtab.active {
+    background: var(--amber);
+    color: #000;
+  }
+
+  /* MAIN */
+  main { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+  .panel-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .panel-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 0.04em;
+  }
+  .panel-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--amber);
+    width: 0%;
+    transition: width 0.3s;
+  }
+  .progress-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* TEST CARD */
+  .test {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border-bright);
+    margin-bottom: 12px;
+    transition: border-color 0.15s;
+  }
+  .test.checked { border-left-color: var(--pass); }
+  .test.failed { border-left-color: var(--fail); }
+  .test-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .test-head:hover { background: var(--surface-2); }
+  .check-circle {
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--border-bright);
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    margin-top: 2px;
+    transition: all 0.15s;
+  }
+  .check-circle:hover { border-color: var(--amber); }
+  .check-circle.checked {
+    background: var(--pass);
+    border-color: var(--pass);
+  }
+  .check-circle.checked::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    width: 6px;
+    height: 11px;
+    border: solid #000;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  .check-circle.failed {
+    background: var(--fail);
+    border-color: var(--fail);
+  }
+  .check-circle.failed::after {
+    content: '✕';
+    position: absolute;
+    left: 4px;
+    top: -2px;
+    font-size: 14px;
+    color: #000;
+    font-weight: 700;
+  }
+  .test-info { flex: 1; min-width: 0; }
+  .test-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+    margin-bottom: 2px;
+  }
+  .test-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .test-ref {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 3px;
+  }
+  .applies-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 2px 7px;
+    margin-top: 6px;
+    text-transform: uppercase;
+    border-radius: 2px;
+  }
+  .applies-badge.all { background: rgba(96, 165, 250, 0.12); color: var(--info); border: 1px solid rgba(96, 165, 250, 0.3); }
+  .applies-badge.conditional { background: rgba(255, 184, 0, 0.10); color: var(--amber); border: 1px solid rgba(255, 184, 0, 0.3); }
+
+  .fail-criteria {
+    background: rgba(248, 113, 113, 0.05);
+    border-left: 3px solid var(--fail);
+    padding: 10px 14px 10px 14px;
+    margin-top: 12px;
+  }
+  .fail-criteria-header {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--fail);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .fail-criteria ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .fail-criteria li {
+    color: var(--text-dim);
+    padding: 3px 0 3px 18px;
+    position: relative;
+    line-height: 1.5;
+    font-size: 13px;
+  }
+  .fail-criteria li::before {
+    content: '✕';
+    position: absolute;
+    left: 0;
+    top: 3px;
+    color: var(--fail);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .ref-table-btn {
+    background: transparent;
+    border: 1px solid var(--info);
+    color: var(--info);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 6px 12px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.15s;
+  }
+  .ref-table-btn:hover { background: rgba(96, 165, 250, 0.1); }
+
+  .ref-table-panel {
+    display: none;
+    margin-top: 10px;
+    padding: 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--info);
+    border-left-width: 3px;
+  }
+  .ref-table-panel.open { display: block; }
+  .ref-table-panel h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--info);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 4px;
+  }
+  .ref-table-panel .ref-cite {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+    letter-spacing: 0.1em;
+  }
+  .ref-table-panel .ref-note {
+    color: var(--text-dim);
+    font-size: 12px;
+    margin-bottom: 12px;
+    font-style: italic;
+    line-height: 1.5;
+  }
+  .ref-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .ref-table th, .ref-table td {
+    border: 1px solid var(--border-bright);
+    padding: 6px 10px;
+    text-align: left;
+  }
+  .ref-table th {
+    background: var(--bg);
+    color: var(--amber);
+    font-weight: 700;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .ref-table tr:nth-child(even) td { background: rgba(255, 255, 255, 0.02); }
+  .ref-table .highlight { color: var(--pass); font-weight: 700; }
+
+  /* CITATION BLOCK */
+  .citations {
+    background: rgba(255, 184, 0, 0.05);
+    border: 1px solid rgba(255, 184, 0, 0.3);
+    border-left: 3px solid var(--amber);
+    padding: 12px 14px;
+    margin-top: 12px;
+  }
+  .citations-header {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--amber);
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cite-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 0;
+    border-top: 1px solid rgba(255, 184, 0, 0.15);
+  }
+  .cite-row:first-of-type { border-top: none; padding-top: 0; }
+  .cite-tag {
+    flex: 0 0 auto;
+    background: var(--amber);
+    color: #000;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 7px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    min-width: 70px;
+    text-align: center;
+  }
+  .cite-tag.section { background: rgba(96, 165, 250, 0.2); color: var(--info); border: 1px solid var(--info); }
+  .cite-tag.a173 { background: rgba(248, 113, 113, 0.15); color: var(--fail); border: 1px solid var(--fail); }
+  .cite-body { flex: 1; min-width: 0; }
+  .cite-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .cite-label {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .cite-copy {
+    background: transparent;
+    border: 1px solid var(--border-bright);
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 4px 8px;
+    cursor: pointer;
+    margin-left: auto;
+    transition: all 0.15s;
+  }
+  .cite-copy:hover { border-color: var(--amber); color: var(--amber); }
+  .cite-copy.copied { background: var(--pass); color: #000; border-color: var(--pass); }
+  .cite-verified {
+    display: inline-block;
+    background: var(--pass);
+    color: #000;
+    font-size: 8px;
+    padding: 1px 4px;
+    border-radius: 2px;
+    margin-left: 6px;
+    font-weight: 700;
+  }
+  .cite-unverified {
+    display: inline-block;
+    background: var(--fail);
+    color: #fff;
+    font-size: 8px;
+    padding: 1px 4px;
+    border-radius: 2px;
+    margin-left: 6px;
+    font-weight: 700;
+  }
+  .cite-notes {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 184, 0, 0.15);
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  /* CONTEXT BAR */
+  .context-bar {
+    background: var(--surface-2);
+    border: 1px solid var(--border-bright);
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .context-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .context-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .context-select {
+    background: var(--bg);
+    border: 1px solid var(--border-bright);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 5px 8px;
+    cursor: pointer;
+  }
+  .context-select:focus { outline: none; border-color: var(--amber); }
+  .context-notice {
+    flex: 1;
+    min-width: 200px;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  /* APP SCREENS */
+  .app-screen { display: none; }
+  .app-screen.active { display: block; }
+
+  /* LANDING */
+  .landing-wrap {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 60px 20px 40px;
+    text-align: center;
+  }
+  .landing-hero {
+    margin-bottom: 48px;
+  }
+  .landing-hero h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(28px, 5vw, 40px);
+    letter-spacing: 0.04em;
+    margin-bottom: 12px;
+  }
+  .landing-hero p {
+    color: var(--text-dim);
+    line-height: 1.6;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  .landing-choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    text-align: left;
+  }
+  .choice-card {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    border-left: 3px solid var(--border-bright);
+    padding: 28px 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text);
+    font-family: inherit;
+    text-align: left;
+  }
+  .choice-card:hover {
+    border-color: var(--amber);
+    border-left-color: var(--amber);
+    background: var(--surface-2);
+    transform: translateY(-2px);
+  }
+  .choice-card .choice-icon {
+    font-size: 36px;
+    margin-bottom: 14px;
+    display: block;
+  }
+  .choice-card .choice-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    color: var(--amber);
+  }
+  .choice-card .choice-desc {
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* WIZARD */
+  .wizard-wrap {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+  .wizard-progress {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 28px;
+    justify-content: center;
+  }
+  .step-dot {
+    height: 4px;
+    width: 50px;
+    background: var(--border);
+    transition: background 0.2s;
+  }
+  .step-dot.active { background: var(--amber); }
+  .step-dot.done { background: var(--pass); }
+  .step-counter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-faint);
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .wizard-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 30px;
+    letter-spacing: 0.04em;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .wizard-subtitle {
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 28px;
+    line-height: 1.5;
+  }
+  .wizard-summary {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    font-size: 12px;
+  }
+  .wizard-summary-row {
+    display: flex;
+    gap: 8px;
+    padding: 3px 0;
+  }
+  .wizard-summary-row .key {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    width: 100px;
+    flex-shrink: 0;
+  }
+  .wizard-summary-row .val {
+    color: var(--amber);
+    font-weight: 600;
+  }
+  .wizard-options {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .wizard-option {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    padding: 16px 18px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text);
+    font-family: inherit;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .wizard-option:hover {
+    border-color: var(--amber);
+    background: var(--surface-2);
+  }
+  .wizard-option.selected {
+    border-color: var(--amber);
+    background: rgba(255, 184, 0, 0.06);
+    box-shadow: inset 3px 0 0 var(--amber);
+  }
+  .wizard-option .opt-icon {
+    font-size: 22px;
+    flex: 0 0 32px;
+    text-align: center;
+  }
+  .wizard-option .opt-body {
+    flex: 1;
+    min-width: 0;
+  }
+  .wizard-option .opt-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .wizard-option .opt-desc {
+    color: var(--text-dim);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .wizard-option .opt-badge {
+    flex: 0 0 auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .wizard-option .opt-badge.verified {
+    background: var(--pass);
+    color: #000;
+  }
+  .wizard-option .opt-badge.verify {
+    background: rgba(255, 184, 0, 0.2);
+    color: var(--amber);
+    border: 1px solid var(--amber);
+  }
+  .wizard-nav {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+  }
+  .wizard-nav .btn { flex: 1; max-width: 200px; }
+  .wizard-restart {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--border-bright);
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  .wizard-restart:hover { border-color: var(--amber); color: var(--amber); }
+
+  /* Hide tabs/context when not in inspection mode */
+  body.mode-landing .tabs,
+  body.mode-wizard .tabs,
+  body.mode-landing .subtitle,
+  body.mode-wizard .subtitle { display: none; }
+  body.mode-landing header,
+  body.mode-wizard header {
+    position: relative;
+    padding-bottom: 16px;
+  }
+  .expand-arrow {
+    color: var(--text-faint);
+    font-size: 12px;
+    transition: transform 0.2s;
+    flex: 0 0 auto;
+    margin-top: 4px;
+  }
+  .test.expanded .expand-arrow { transform: rotate(180deg); }
+
+  .test-body {
+    display: none;
+    padding: 0 16px 16px 52px;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+  .test.expanded .test-body { display: block; }
+  .test-desc {
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .test-desc strong { color: var(--text); font-weight: 600; }
+
+  /* CALCULATOR */
+  .calc {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 14px;
+    margin-top: 12px;
+  }
+  .calc-header {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--amber);
+    margin-bottom: 10px;
+  }
+  .calc-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .calc-row label {
+    font-size: 13px;
+    color: var(--text);
+  }
+  .calc-row .unit {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-left: 4px;
+  }
+  .calc-input {
+    width: 130px;
+    background: var(--bg);
+    border: 1px solid var(--border-bright);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    padding: 8px 10px;
+    text-align: right;
+  }
+  .calc-input:focus {
+    outline: none;
+    border-color: var(--amber);
+  }
+  .calc-result {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-left: 3px solid var(--pending);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .calc-result.pass { border-left-color: var(--pass); background: var(--pass-bg); color: var(--pass); }
+  .calc-result.fail { border-left-color: var(--fail); background: var(--fail-bg); color: var(--fail); }
+  .calc-result .label {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    opacity: 0.7;
+    margin-bottom: 2px;
+  }
+  .calc-result .value {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .calc-result .detail {
+    display: block;
+    font-size: 11px;
+    margin-top: 4px;
+    opacity: 0.85;
+  }
+
+  .notes-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 8px 10px;
+    margin-top: 10px;
+    min-height: 48px;
+    resize: vertical;
+  }
+  .notes-input:focus { outline: none; border-color: var(--amber); }
+
+  .fail-btn {
+    background: transparent;
+    border: 1px solid var(--border-bright);
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 6px 12px;
+    cursor: pointer;
+    margin-top: 12px;
+    transition: all 0.15s;
+  }
+  .fail-btn:hover { border-color: var(--fail); color: var(--fail); }
+  .fail-btn.active { background: var(--fail); border-color: var(--fail); color: #000; }
+
+  /* TOOLBAR */
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+  .btn:hover { border-color: var(--amber); color: var(--amber); }
+  .btn.primary { background: var(--amber); color: #000; border-color: var(--amber); }
+  .btn.primary:hover { background: #fff; color: #000; border-color: #fff; }
+
+  .info-banner {
+    background: rgba(96, 165, 250, 0.08);
+    border-left: 3px solid var(--info);
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+  .info-banner strong { color: var(--info); }
+
+  footer {
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+    padding: 20px;
+    text-align: center;
+    color: var(--text-faint);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+
+  /* PRINT */
+  @media print {
+    body { background: white; color: black; }
+    header { position: static; background: white; border-bottom: 2px solid black; }
+    .stripe, .tabs, .subtabs, .toolbar, .fail-btn, .expand-arrow { display: none !important; }
+    h1, .panel-title { color: black; }
+    h1 .accent { color: black; }
+    .test, .calc { background: white; border-color: #000; }
+    .test-body { display: block !important; }
+    .subtitle, .test-ref, .test-id, .panel-meta, .progress-label { color: #333; }
+    .test-desc, .text-dim { color: #000; }
+    .calc-input, .notes-input { border-color: #000; color: #000; background: #f5f5f5; }
+    .calc-result { background: #f5f5f5; color: #000; }
+    .check-circle { border-color: #000; }
+    .progress-bar, .progress-fill { display: none; }
+    .panel { page-break-inside: avoid; }
+    .test { page-break-inside: avoid; margin-bottom: 8px; }
+    main { max-width: 100%; padding: 10px; }
+  }
+
+  @media (max-width: 600px) {
+    .test-body { padding-left: 16px; }
+    .calc-row { grid-template-columns: 1fr; }
+    .calc-input { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="stripe"></div>
+  <div class="header-inner">
+    <h1>ELEVATOR INSPECTOR <span class="accent">FIELD GUIDE</span></h1>
+    <div class="subtitle">A17.2 PERIODIC TESTS · CHECKLIST &amp; COMPLIANCE CALCULATOR</div>
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="hydraulic">HYDRAULIC</button>
+      <button class="tab" data-tab="traction">TRACTION</button>
+      <button class="tab" data-tab="mrl">MRL ADDENDUM</button>
+      <button class="tab" data-tab="escalator">ESCALATOR</button>
+      <button class="tab" data-tab="movingwalk">MOVING WALK</button>
+    </div>
+  </div>
+</header>
+
+<!-- LANDING SCREEN -->
+<div id="screenLanding" class="app-screen">
+  <div class="landing-wrap">
+    <div class="landing-hero">
+      <h2>BEGIN INSPECTION</h2>
+      <p>Choose how you want to use the field guide. The wizard filters the checklist to exactly what you're inspecting; browse mode shows everything at once for study or reference.</p>
+    </div>
+    <div class="landing-choices">
+      <button class="choice-card" onclick="startWizard()">
+        <span class="choice-icon">🧭</span>
+        <div class="choice-title">INSPECTION WIZARD</div>
+        <div class="choice-desc">Guided workflow. Pick jurisdiction → code edition → equipment type → category. Lands you on the filtered checklist with citations matched to your selections.</div>
+      </button>
+      <button class="choice-card" onclick="goToBrowse()">
+        <span class="choice-icon">📖</span>
+        <div class="choice-title">BROWSE ALL</div>
+        <div class="choice-desc">View all checklists with jurisdiction selector at the top. Best for study, training, or referencing multiple equipment types in one session.</div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- WIZARD SCREEN -->
+<div id="screenWizard" class="app-screen">
+  <div class="wizard-wrap">
+    <div class="wizard-progress">
+      <span class="step-dot" data-step="1"></span>
+      <span class="step-dot" data-step="2"></span>
+      <span class="step-dot" data-step="3"></span>
+      <span class="step-dot" data-step="4"></span>
+    </div>
+    <div class="step-counter" id="wizardStepCounter">STEP 1 OF 4</div>
+    <h2 class="wizard-title" id="wizardTitle">Where is this inspection?</h2>
+    <p class="wizard-subtitle" id="wizardSubtitle">Pick the jurisdiction. The tool will format citations accordingly.</p>
+
+    <div class="wizard-summary" id="wizardSummary" style="display:none"></div>
+    <div class="wizard-options" id="wizardOptions"></div>
+
+    <div class="wizard-nav">
+      <button class="btn" onclick="wizardBack()">← Back</button>
+      <button class="btn primary" id="wizardNextBtn" onclick="wizardNext()" disabled>Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- INSPECTION SCREEN -->
+<div id="screenInspection" class="app-screen">
+<main>
+  <div class="toolbar">
+    <button class="btn primary" onclick="goToLanding()">🧭 Wizard</button>
+    <button class="btn" onclick="window.print()">↓ Print / Save PDF</button>
+    <button class="btn" onclick="exportJSON()">↓ Export Data</button>
+    <button class="btn" onclick="document.getElementById('importFile').click()">↑ Import Data</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+    <button class="btn" onclick="resetAll()">⟲ Reset</button>
+  </div>
+
+  <div class="context-bar">
+    <div class="context-group">
+      <span class="context-label">Jurisdiction</span>
+      <select class="context-select" id="jurisdictionSelect">
+        <option value="FL">Florida (DBPR)</option>
+        <option value="NV">Nevada (+ A17.3 overlay)</option>
+        <option value="TX">Texas (TDLR)</option>
+        <option value="CO">Colorado</option>
+        <option value="NONE">Generic A17.1 only</option>
+      </select>
+    </div>
+    <div class="context-group">
+      <span class="context-label">Code Edition</span>
+      <select class="context-select" id="editionSelect">
+        <option value="2007">A17.1-2007</option>
+        <option value="2010">A17.1-2010</option>
+        <option value="2013">A17.1-2013 ✓</option>
+        <option value="2016">A17.1-2016</option>
+        <option value="2019">A17.1-2019 ✓</option>
+        <option value="2022">A17.1-2022</option>
+      </select>
+    </div>
+    <div class="context-notice" id="contextNotice"></div>
+  </div>
+
+  <div class="info-banner">
+    <strong>HOW TO USE:</strong> Tap any item to expand it, enter measured values, get instant compliance verdict. Tap the circle to mark complete; "Mark as Fail" to flag non-compliance. Items show an <span style="color:var(--info)">APPLIES TO ALL</span> or <span style="color:var(--amber)">CONDITIONAL</span> badge indicating when they apply (e.g., roped hydraulic only, if rupture valve equipped). <br><br>
+    <strong>MRL UNITS:</strong> The MRL ADDENDUM tab contains items unique to or specifically required for machine-room-less installations. Use it <em>in addition to</em> the standard Hydraulic or Traction items — MRL elevators still need every applicable test from the base equipment type.<br><br>
+    <strong>CODE REFERENCES:</strong> Item numbers reference ASME A17.2 (Guide for Inspection) and A17.1/B44 (Safety Code). Numbers can shift between editions — verify against current edition before citing in written reports. Tolerances and formulas reflect A17.1 as commonly applied; consult AHJ and local amendments.
+  </div>
+
+  <div class="panel-header">
+    <div class="panel-title" id="panelTitle">HYDRAULIC ELEVATOR — CATEGORY 1</div>
+    <div class="panel-meta" id="panelMeta">ANNUAL · A17.1 §8.11.3</div>
+  </div>
+
+  <div class="subtabs" id="subtabs">
+    <button class="subtab active" data-cat="cat1">CAT 1 — ANNUAL</button>
+    <button class="subtab" data-cat="cat5">CAT 5 — 5-YEAR</button>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-label" id="progressLabel">0 / 0 ITEMS COMPLETE</div>
+
+  <div id="testList"></div>
+</main>
+</div>
+
+<footer>
+  FIELD GUIDE v1.0 · BASED ON ASME A17.2 / A17.1 · VERIFY ALL VALUES AGAINST CURRENT CODE EDITION &amp; AHJ
+</footer>
+
+<script>
+/* ============================================================
+   TEST DATA
+   Each test: { id, title, ref, desc, calc?: { inputs, formula, result } }
+   ============================================================ */
+
+const TESTS = {
+
+/* ---------- HYDRAULIC CATEGORY 1 (ANNUAL) ---------- */
+hydraulic_cat1: [
+  { id: 'H1.1', title: 'No-Load Operation, Full Travel', ref: 'A17.2 §1.X · A17.1 §8.11.3',
+    desc: 'Run elevator full travel with no load both directions. Verify smooth operation, normal acceleration/deceleration, and accurate leveling at each landing.' },
+
+  { id: 'H1.2', title: 'Normal Terminal Stopping Device', ref: 'A17.1 §2.25.2 / 3.25',
+    desc: 'Confirm normal terminal slowdown and stop functions at top and bottom landings under no load.' },
+
+  { id: 'H1.3', title: 'Final Terminal Stopping Device', ref: 'A17.1 §2.25.3 / 3.25',
+    desc: 'With normal stop bypassed (per safe procedure), verify final limit removes power. Restore to service. Do not impact buffer on hydraulic.' },
+
+  { id: 'H1.4', title: 'Anti-Creep Device', ref: 'A17.1 §3.26.3',
+    desc: 'Required to maintain car within 1 in. (25 mm) of landing regardless of oil leakage. Stop car at landing, observe creep over time.',
+    calc: {
+      label: 'Anti-Creep Verification',
+      inputs: [
+        { id: 'creep_dist', label: 'Measured creep distance', unit: 'in', placeholder: '0.0' },
+        { id: 'creep_time', label: 'Observation period', unit: 'sec', placeholder: '30' }
+      ],
+      compute: (v) => {
+        const d = parseFloat(v.creep_dist);
+        const t = parseFloat(v.creep_time);
+        if (isNaN(d) || isNaN(t)) return { state: 'pending', text: 'Enter measured creep + observation period.' };
+        const pass = d <= 1.0;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'COMPLIANT' : 'NON-COMPLIANT',
+          value: d.toFixed(2) + ' in over ' + t + ' s',
+          detail: 'Max allowed: 1.00 in (25 mm) regardless of time — A17.1 §3.26.3'
+        };
+      }
+    }
+  },
+
+  { id: 'H1.5', title: 'Pressure Relief Valve', ref: 'A17.1 §3.19.4.2 · A17.2 hydraulic items',
+    desc: 'Relief valve must be set so it cannot bypass oil at pressures less than working pressure, and must not allow pressure to exceed <strong>150% of working pressure</strong>. Block car at bottom landing, energize up direction, read gauge.',
+    calc: {
+      label: 'Relief Valve Setting Verification',
+      inputs: [
+        { id: 'working_psi', label: 'Working pressure (no load, up)', unit: 'psi', placeholder: '0' },
+        { id: 'relief_psi', label: 'Measured relief setting', unit: 'psi', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const wp = parseFloat(v.working_psi);
+        const rp = parseFloat(v.relief_psi);
+        if (isNaN(wp) || isNaN(rp)) return { state: 'pending', text: 'Enter working pressure and relief valve setting.' };
+        const limit = wp * 1.5;
+        const pass = rp <= limit && rp >= wp;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'COMPLIANT' : 'OUT OF RANGE',
+          value: rp.toFixed(0) + ' psi · max ' + limit.toFixed(0) + ' psi',
+          detail: 'Relief must be ≤ 150% × working (' + limit.toFixed(0) + ' psi) and ≥ working (' + wp.toFixed(0) + ' psi). Ratio: ' + (rp/wp*100).toFixed(1) + '%.'
+        };
+      }
+    }
+  },
+
+  { id: 'H1.6', title: 'Low Pressure (Low Oil) Protection', ref: 'A17.1 §3.26.9',
+    desc: 'On direct-acting hydraulic, verify that loss of pressure or low oil causes car to descend to lowest landing and removes power, or otherwise prevents operation.' },
+
+  { id: 'H1.7', title: 'Pressure Switch', ref: 'A17.1 §3.26.7',
+    desc: 'Where required, verify pressure switch opens electrical circuit when pressure drops below value sufficient to lift empty car.' },
+
+  { id: 'H1.8', title: 'Slack-Rope Device (Roped Hydraulic)', ref: 'A17.1 §3.18.4',
+    desc: 'Roped-hydraulic only. With car landed on safeties or supports, run cylinder to create slack rope and verify device removes power.' },
+
+  { id: 'H1.9', title: 'Plunger Stop Ring / Travel Limit (Visual)', ref: 'A17.1 §3.18.2',
+    desc: 'Visual confirmation of plunger stop ring and that travel limit will positively stop plunger before exiting cylinder.' },
+
+  { id: 'H1.10', title: 'Car & Hoistway Door Operation', ref: 'A17.1 §2.13',
+    desc: 'Power closing, power opening, door reopening (light curtain / detector edge), nudging, door closing force ≤ 30 lbf, and timing.' },
+
+  { id: 'H1.11', title: 'Door & Gate Interlocks / Switches', ref: 'A17.1 §2.12',
+    desc: 'Open each hoistway door from landing; verify car will not run. Open car gate; verify car will not run with hoistway door closed.' },
+
+  { id: 'H1.12', title: 'Door Closing Force', ref: 'A17.1 §2.13.4',
+    desc: 'Measure force required to prevent door from closing. Must not exceed 30 lbf.',
+    calc: {
+      label: 'Door Force Verification',
+      inputs: [
+        { id: 'door_force', label: 'Measured kinetic / static force', unit: 'lbf', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const f = parseFloat(v.door_force);
+        if (isNaN(f)) return { state: 'pending', text: 'Enter measured door force.' };
+        const pass = f <= 30;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'COMPLIANT' : 'EXCEEDS MAX',
+          value: f.toFixed(1) + ' lbf',
+          detail: 'Max allowed: 30 lbf (A17.1 §2.13.4.2.2).'
+        };
+      }
+    }
+  },
+
+  { id: 'H1.13', title: 'Phase Reversal / Phase Loss Protection', ref: 'A17.1 §3.26.4',
+    desc: 'Simulate single-phase loss and phase reversal at supply. Verify controller prevents operation.' },
+
+  { id: 'H1.14', title: 'Firefighters\u2019 Service — Phase I Recall', ref: 'A17.1 §2.27.3',
+    desc: 'Activate Phase I key, simulate smoke detector activation. Verify recall to designated/alternate landing, door operation, and visual/audible signal.' },
+
+  { id: 'H1.15', title: 'Firefighters\u2019 Service — Phase II In-Car', ref: 'A17.1 §2.27.3.3',
+    desc: 'Verify Phase II key operation, door hold-open, "Call Cancel" function, and that car will not run without continuous pressure on door close.' },
+
+  { id: 'H1.16', title: 'Emergency Lighting & Alarm', ref: 'A17.1 §2.14.7 / 2.27.1',
+    desc: 'Activate emergency stop / remove power. Verify emergency lighting illuminates and alarm bell sounds. Test on backup battery.' },
+
+  { id: 'H1.17', title: 'Emergency Two-Way Communication', ref: 'A17.1 §2.27.1.1',
+    desc: 'Verify two-way communication to authorized personnel from car. Test call response within required time.' },
+
+  { id: 'H1.18', title: 'Stop Switches (Pit, Top of Car, Machine Room)', ref: 'A17.1 §2.26.2',
+    desc: 'Activate each stop switch; verify car will not run from any operating position.' },
+
+  { id: 'H1.19', title: 'Standby Power Operation (if equipped)', ref: 'A17.1 §2.27.2',
+    desc: 'Transfer to standby power. Verify selected car(s) return to designated landing, doors operate, and system functions per design.' },
+
+  { id: 'H1.20', title: 'Auxiliary Rescue Device (ARD/Battery Lowering)', ref: 'A17.1 §3.26.10',
+    desc: 'Where equipped, simulate power failure. Verify ARD lowers car to nearest landing and opens doors.' }
+],
+
+/* ---------- HYDRAULIC CATEGORY 5 (5-YEAR) ---------- */
+hydraulic_cat5: [
+  { id: 'H5.1', applies: 'all',
+    title: 'Pressure Relief Valve — Rated Load Test',
+    ref: 'A17.1 §3.19.4.2 / 8.11.4',
+    desc: 'Place rated load in car. Bypass terminal stops at bottom landing per safe procedure, energize up direction. Read pressure as relief valve opens. Setting must not allow pressure to exceed <strong>150% of working pressure (measured with rated load)</strong>. Re-seal valve after verification. This is the primary Cat 5 test for all hydraulic elevators.',
+    calc: {
+      label: 'Relief Valve — Rated Load',
+      inputs: [
+        { id: 'h5_wp', label: 'Working pressure (rated load, up)', unit: 'psi', placeholder: '0' },
+        { id: 'h5_relief', label: 'Relief valve opens at', unit: 'psi', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const wp = parseFloat(v.h5_wp);
+        const rp = parseFloat(v.h5_relief);
+        if (isNaN(wp) || isNaN(rp)) return { state: 'pending', text: 'Enter pressures.' };
+        const max = wp * 1.5;
+        const pass = rp <= max && rp >= wp;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'COMPLIANT' : (rp > max ? 'EXCEEDS 150%' : 'BELOW WORKING'),
+          value: rp.toFixed(0) + ' psi · max ' + max.toFixed(0) + ' psi',
+          detail: 'Setting: ' + (rp/wp*100).toFixed(1) + '% of loaded working pressure. Limit: 150%. Must also exceed working pressure to be valid.'
+        };
+      }
+    }
+  },
+
+  { id: 'H5.2', applies: 'all',
+    title: 'Anti-Creep — Rated Load',
+    ref: 'A17.1 §3.26.3 / 8.11.4',
+    desc: 'With rated load in car, stop at a landing and observe creep over time. Anti-creep must maintain car within <strong>1 in (25 mm)</strong> of landing regardless of oil leakage or temperature.',
+    calc: {
+      label: 'Anti-Creep — Loaded',
+      inputs: [
+        { id: 'h5_creep', label: 'Measured creep', unit: 'in', placeholder: '0.0' },
+        { id: 'h5_creep_t', label: 'Observation period', unit: 'sec', placeholder: '30' }
+      ],
+      compute: (v) => {
+        const d = parseFloat(v.h5_creep);
+        const t = parseFloat(v.h5_creep_t);
+        if (isNaN(d) || isNaN(t)) return { state: 'pending', text: 'Enter measured creep and time.' };
+        const pass = d <= 1.0;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'COMPLIANT' : 'NON-COMPLIANT',
+          value: d.toFixed(2) + ' in over ' + t + ' s',
+          detail: 'Max 1.00 in (25 mm) regardless of duration.'
+        };
+      }
+    }
+  },
+
+  { id: 'H5.3', applies: 'all',
+    title: 'Working Pressure with Rated Load (Reference Reading)',
+    ref: 'A17.1 §8.11.4',
+    desc: 'Document working pressure with rated load in up direction. Serves as the baseline for the relief valve test (H5.1) and trends seal/packing condition. Significant deviation from design or prior reading flags packing wear, seal degradation, or fluid issues.',
+    calc: {
+      label: 'Working Pressure Reading',
+      inputs: [
+        { id: 'h5_wp_meas', label: 'Measured pressure (rated load, up)', unit: 'psi', placeholder: '0' },
+        { id: 'h5_wp_design', label: 'Design / data plate pressure', unit: 'psi', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const m = parseFloat(v.h5_wp_meas);
+        const d = parseFloat(v.h5_wp_design);
+        if (isNaN(m) || isNaN(d)) return { state: 'pending', text: 'Enter measured and design pressures.' };
+        const dev = ((m - d) / d) * 100;
+        const ok = Math.abs(dev) <= 10;
+        return {
+          state: ok ? 'pass' : 'fail',
+          label: ok ? 'WITHIN ±10% OF DESIGN' : 'DEVIATION FLAG',
+          value: m.toFixed(0) + ' psi · ' + (dev >= 0 ? '+' : '') + dev.toFixed(1) + '%',
+          detail: '±10% is an inspection rule-of-thumb, not code limit. Trend against prior Cat 1/5 readings. Investigate cause if drifting.'
+        };
+      }
+    }
+  },
+
+  { id: 'H5.4', applies: 'conditional', condition: 'If equipped with rupture / overspeed valve',
+    title: 'Rupture Valve / Overspeed Valve Test',
+    ref: 'A17.1 §3.19.4.7',
+    desc: 'Required for in-ground hydraulic with buried piping where rupture valve protects against line failure. Procedure varies by manufacturer — typically simulates pipe rupture or overspeed condition. Verify valve closes, car stops, and reset procedure functions correctly. Confirm valve setting on tag.' },
+
+  { id: 'H5.5', applies: 'conditional', condition: 'If equipped with plunger gripper',
+    title: 'Plunger Gripper Test',
+    ref: 'A17.1 §3.17.3',
+    desc: 'Trip plunger gripper at governor overspeed condition. Verify positive grip on plunger, electrical contact opens, car stops. Reset and confirm normal operation. Visual check of jaw condition.' },
+
+  { id: 'H5.6', applies: 'conditional', condition: 'Class C2 freight loading only',
+    title: 'Class C2 Loading Verification',
+    ref: 'A17.1 §2.16.8',
+    desc: 'For freight elevators using truck loading (Class C2): static load test at rated load plus weight of loading vehicle. Verify platform and supporting structure handle combined load without permanent deformation.' },
+
+  { id: 'H5.7', applies: 'conditional', condition: 'Roped hydraulic only',
+    title: 'Car Safety — Dynamic Test',
+    ref: 'A17.1 §3.17 / 8.10.2.2.2',
+    desc: 'Roped hydraulic only. Apply safety at governor trip speed with rated load. Verify positive engagement, stopping within code distance, and reset functionality.' },
+
+  { id: 'H5.8', applies: 'conditional', condition: 'Roped hydraulic only',
+    title: 'Governor — Overspeed Trip',
+    ref: 'A17.1 §3.18.3',
+    desc: 'Roped hydraulic only. Drive governor to mechanical trip speed. Verify electrical contact opens before jaw closure, and jaws grip rope positively.',
+    calc: {
+      label: 'Governor Trip — Roped Hydro',
+      inputs: [
+        { id: 'h5_rh_rated', label: 'Rated speed', unit: 'fpm', placeholder: '0' },
+        { id: 'h5_rh_trip', label: 'Mechanical trip', unit: 'fpm', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const rs = parseFloat(v.h5_rh_rated);
+        const ts = parseFloat(v.h5_rh_trip);
+        if (isNaN(rs) || isNaN(ts)) return { state: 'pending', text: 'Enter speeds.' };
+        const min = rs * 1.15;
+        const pct = (ts / rs) * 100;
+        const pass = ts >= min && pct <= 140;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'WITHIN RANGE' : 'OUT OF RANGE',
+          value: ts.toFixed(0) + ' fpm · ' + pct.toFixed(1) + '% rated',
+          detail: 'Min 115% rated (' + min.toFixed(0) + ' fpm). Verify max in A17.1 Table 2.18.2.1 for your rated speed.'
+        };
+      }
+    }
+  },
+
+  { id: 'H5.9', applies: 'conditional', condition: 'Roped hydraulic with oil buffer',
+    title: 'Oil Buffer Test',
+    ref: 'A17.1 §3.22',
+    desc: 'For counterweight oil buffer on roped hydraulic: impact at rated speed with rated load. Verify full compression, return to extended position within 90 s, no oil loss.' }
+],
+
+/* ---------- TRACTION CAT 1 (ANNUAL) ---------- */
+traction_cat1: [
+  { id: 'T1.1', title: 'No-Load Running Test', ref: 'A17.1 §8.11.2.1',
+    desc: 'Run elevator full travel, both directions, no load. Verify acceleration, deceleration, leveling, and ride quality.' },
+
+  { id: 'T1.2', title: 'Normal Terminal Stopping', ref: 'A17.1 §2.25.2',
+    desc: 'Verify normal slowdown / stop at top and bottom under no load. Includes verification of door zone for re-leveling if equipped.' },
+
+  { id: 'T1.3', title: 'Final Terminal Stopping (Electrical)', ref: 'A17.1 §2.25.3',
+    desc: 'With normal stops bypassed (controlled procedure), verify final limit opens main line / stops car before striking buffer. Do not impact buffer at Cat 1.' },
+
+  { id: 'T1.4', title: 'Car Safety — Visual / No-Load', ref: 'A17.1 §2.17 · A17.2 §8.6.X',
+    desc: 'Visual inspection of safety jaws, linkage, and governor rope drum. Trip safety manually with car at slow speed, no load (where procedure permits). Full dynamic test occurs at Cat 5.' },
+
+  { id: 'T1.5', title: 'Governor — Electrical Trip / Visual', ref: 'A17.1 §2.18',
+    desc: 'Verify governor wire rope condition, sheave wear, jaw operation. Trip governor manually to confirm electrical overspeed contact opens before mechanical trip. Full overspeed test at Cat 5.',
+    calc: {
+      label: 'Electrical Trip Verification',
+      inputs: [
+        { id: 't1_rated', label: 'Rated car speed', unit: 'fpm', placeholder: '0' },
+        { id: 't1_etrip', label: 'Electrical trip speed', unit: 'fpm', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const rs = parseFloat(v.t1_rated);
+        const ts = parseFloat(v.t1_etrip);
+        if (isNaN(rs) || isNaN(ts)) return { state: 'pending', text: 'Enter rated and electrical trip speeds.' };
+        const min = rs * 1.05;
+        const pass = ts >= min;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'WITHIN RANGE' : 'TOO LOW',
+          value: ts.toFixed(0) + ' fpm · ' + (ts/rs*100).toFixed(1) + '% rated',
+          detail: 'Electrical trip must occur before mechanical trip. Typically ~110–115% rated; verify per controller spec.'
+        };
+      }
+    }
+  },
+
+  { id: 'T1.6', title: 'Brake — Electromechanical', ref: 'A17.1 §2.24',
+    desc: 'Apply brake from up and down direction at rated speed. Verify holds car at floor under normal load. Cat 5 verifies 125% rated load hold.' },
+
+  { id: 'T1.7', title: 'Inspection Operation (Top of Car)', ref: 'A17.1 §2.26.1.4',
+    desc: 'Verify constant-pressure operation at reduced speed (max 150 fpm), function of all stop switches, and that automatic operation is disabled.' },
+
+  { id: 'T1.8', title: 'Hoistway Access Switches', ref: 'A17.1 §2.12.7',
+    desc: 'At top and bottom terminal landings, verify access switch operates only with key, allows limited car movement to gain access.' },
+
+  { id: 'T1.9', title: 'Door / Gate Operation, Reopening, Closing Force', ref: 'A17.1 §2.13',
+    desc: 'Door operator, reopening device (curtain/edge), nudging, kinetic energy ≤ 7.0 ft-lbf, closing force ≤ 30 lbf.',
+    calc: {
+      label: 'Door Closing Force',
+      inputs: [
+        { id: 't1_doorf', label: 'Measured force', unit: 'lbf', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const f = parseFloat(v.t1_doorf);
+        if (isNaN(f)) return { state: 'pending', text: 'Enter measured force.' };
+        const pass = f <= 30;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'COMPLIANT' : 'EXCEEDS 30 LBF',
+          value: f.toFixed(1) + ' lbf',
+          detail: 'Max: 30 lbf (A17.1 §2.13.4.2.2).'
+        };
+      }
+    }
+  },
+
+  { id: 'T1.10', title: 'Hoistway Door Interlocks', ref: 'A17.1 §2.12',
+    desc: 'At each landing: open hoistway door from outside, verify car will not run. Verify locking mechanism engages before door closes ~3/4 in (19 mm).' },
+
+  { id: 'T1.11', title: 'Car Door / Gate Switches', ref: 'A17.1 §2.14.5',
+    desc: 'Open car gate with hoistway door closed; verify car will not run.' },
+
+  { id: 'T1.12', title: 'Phase Reversal / Loss', ref: 'A17.1 §2.26.4',
+    desc: 'Simulate single-phase loss; verify operation prevented or controlled stop occurs.' },
+
+  { id: 'T1.13', title: 'Emergency / Standby Power', ref: 'A17.1 §2.27.2',
+    desc: 'Transfer to standby. Verify selected cars return to designated floor, then operate per controller logic.' },
+
+  { id: 'T1.14', title: 'Firefighters\u2019 Service Phase I', ref: 'A17.1 §2.27.3',
+    desc: 'Activate via lobby key and via each smoke detector zone. Verify proper recall, door operation, visual signal.' },
+
+  { id: 'T1.15', title: 'Firefighters\u2019 Service Phase II', ref: 'A17.1 §2.27.3.3',
+    desc: 'In-car key operation, door behavior, "Call Cancel" function, hold-to-close door operation.' },
+
+  { id: 'T1.16', title: 'Emergency Communication', ref: 'A17.1 §2.27.1.1',
+    desc: 'Activate alarm from car; verify two-way communication, visual/audible response, and required response time.' },
+
+  { id: 'T1.17', title: 'Emergency Lighting & Alarm Bell', ref: 'A17.1 §2.14.7',
+    desc: 'Interrupt normal power; verify emergency light (≥ 4 hours) and alarm bell on backup.' },
+
+  { id: 'T1.18', title: 'Top-of-Car Stop Switch & Pit Stop Switch', ref: 'A17.1 §2.26.2',
+    desc: 'Verify each stop switch interrupts power, requires manual reset, and is properly labeled.' },
+
+  { id: 'T1.19', title: 'Unintended Car Movement (UCM) — Operational', ref: 'A17.1 §2.19.2',
+    desc: 'Where equipped: verify UCM device monitoring and self-test indicators. Full functional test at Cat 5.' },
+
+  { id: 'T1.20', title: 'Ascending Car Overspeed Protection — Operational', ref: 'A17.1 §2.19.1',
+    desc: 'Where equipped: verify monitoring indicators / self-test. Full functional test at Cat 5.' },
+
+  { id: 'T1.21', title: 'Earthquake Protection (Seismic Zones 2+)', ref: 'A17.1 §8.4',
+    desc: 'Where required: test seismic switch / counterweight derailment detector. Verify proper operation and recovery procedure.' }
+],
+
+/* ---------- TRACTION CAT 5 (5-YEAR) ---------- */
+traction_cat5: [
+  { id: 'T5.1', title: 'Car Safety — Full Dynamic Test', ref: 'A17.1 §8.10.2.2 / 8.11.2.2',
+    desc: 'Type A (instantaneous): test at rated speed with rated load. Type B (flexible-clamp): test at governor tripping speed with rated load. Verify safety stops car within allowable distances.',
+    referenceTable: {
+      title: 'Type B Safety Stopping Distance — Rated Load at Max Governor Trip',
+      ref: 'A17.1-2019 Table 2.17.3 (verified from code)',
+      note: 'These are the actual A17.1-2019 Table 2.17.3 values for maximum governor trip speeds. The calculator uses 1g (32.2 ft/s²) max average retardation; the table values reflect both the 1g ceiling and code-specified minimum retardation that varies with speed.',
+      columns: ['Rated Speed (fpm)', 'Max Gov Trip (fpm)', 'Min Stop (in)', 'Max Stop (in)'],
+      rows: [
+        ['0–125', '175', '1', '15'],
+        ['150', '210', '2', '16'],
+        ['175', '250', '3', '19'],
+        ['200', '280', '4', '22'],
+        ['225', '308', '5', '24'],
+        ['250', '337', '6', '27'],
+        ['300', '395', '8', '33'],
+        ['350', '452', '10', '40'],
+        ['400', '510', '13', '48'],
+        ['450', '568', '17', '58'],
+        ['500', '625', '20', '68'],
+        ['600', '740', '28', '91'],
+        ['700', '855', '38', '128'],
+        ['800', '970', '49', '150'],
+        ['900', '1085', '61', '183'],
+        ['1000', '1200', '75', '222']
+      ]
+    },
+    calc: {
+      label: 'Type B Safety Stopping Distance',
+      inputs: [
+        { id: 't5_gov', label: 'Governor trip speed', unit: 'fpm', placeholder: '0' },
+        { id: 't5_stop', label: 'Measured stopping distance', unit: 'in', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const gs = parseFloat(v.t5_gov);
+        const sd = parseFloat(v.t5_stop);
+        if (isNaN(gs) || isNaN(sd)) return { state: 'pending', text: 'Enter governor trip speed and measured stopping distance.' };
+        // A17.1-2019 Table 2.17.3 — actual code values
+        const table = [
+          { gov: 175,  min: 1,   max: 15  },
+          { gov: 210,  min: 2,   max: 16  },
+          { gov: 250,  min: 3,   max: 19  },
+          { gov: 280,  min: 4,   max: 22  },
+          { gov: 308,  min: 5,   max: 24  },
+          { gov: 337,  min: 6,   max: 27  },
+          { gov: 395,  min: 8,   max: 33  },
+          { gov: 452,  min: 10,  max: 40  },
+          { gov: 510,  min: 13,  max: 48  },
+          { gov: 568,  min: 17,  max: 58  },
+          { gov: 625,  min: 20,  max: 68  },
+          { gov: 740,  min: 28,  max: 91  },
+          { gov: 855,  min: 38,  max: 128 },
+          { gov: 970,  min: 49,  max: 150 },
+          { gov: 1085, min: 61,  max: 183 },
+          { gov: 1200, min: 75,  max: 222 }
+        ];
+        // Linear interpolation
+        let minSD, maxSD;
+        if (gs <= table[0].gov) { minSD = table[0].min; maxSD = table[0].max; }
+        else if (gs >= table[table.length-1].gov) { minSD = table[table.length-1].min; maxSD = table[table.length-1].max; }
+        else {
+          for (let i = 0; i < table.length-1; i++) {
+            if (gs >= table[i].gov && gs <= table[i+1].gov) {
+              const f = (gs - table[i].gov) / (table[i+1].gov - table[i].gov);
+              minSD = table[i].min + f * (table[i+1].min - table[i].min);
+              maxSD = table[i].max + f * (table[i+1].max - table[i].max);
+              break;
+            }
+          }
+        }
+        const pass = sd >= minSD && sd <= maxSD;
+        const v_fps = gs / 60;
+        const sd_ft = sd / 12;
+        const a = sd_ft > 0 ? (v_fps*v_fps) / (2 * sd_ft) : 0;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'WITHIN TABLE LIMITS' : (sd < minSD ? 'BELOW MIN — TOO HARSH' : 'ABOVE MAX — TOO SOFT'),
+          value: sd.toFixed(2) + ' in · range ' + minSD.toFixed(1) + '–' + maxSD.toFixed(1) + ' in',
+          detail: 'A17.1 Table 2.17.3 (interpolated). Avg retardation: ' + a.toFixed(1) + ' ft/s². 1g ceiling: 32.2 ft/s².'
+        };
+      }
+    }
+  },
+
+  { id: 'T5.2', title: 'Counterweight Safety (if equipped)', ref: 'A17.1 §2.17.5',
+    desc: 'For low-overhead / occupied space below: test counterweight safety at governor trip speed. Apply manually if necessary per procedure.' },
+
+  { id: 'T5.3', title: 'Governor — Overspeed Trip', ref: 'A17.1 §2.18.2',
+    desc: 'Drive governor (typically with external means at machine) to verify mechanical trip occurs within code range. Verify pull-through force, jaw closure, electrical contact sequence.',
+    referenceTable: {
+      title: 'Governor Maximum Trip Speeds (Car)',
+      ref: 'A17.1 Table 2.18.2.1',
+      note: 'Minimum trip speed: 115% of rated speed (universal). Maximum varies by rated speed per A17.1 Table 2.18.2.1. Values shown are common reference points for the table; for rated speeds between listed values, the calculator interpolates conservatively. Always cross-check the printed table for your specific rated speed before issuing a write-up.',
+      columns: ['Rated Speed (fpm)', 'Min Trip — 115% (fpm)', 'Max Trip (fpm)'],
+      rows: [
+        ['Up to 125', 'Up to 144', '175'],
+        ['150', '173', '210'],
+        ['175', '202', '250'],
+        ['200', '230', '280'],
+        ['250', '288', '337'],
+        ['300', '345', '395'],
+        ['350', '403', '452'],
+        ['400', '460', '510'],
+        ['500', '575', '625'],
+        ['600', '690', '740'],
+        ['700', '805', '855'],
+        ['800', '920', '970'],
+        ['1000', '1150', '1200']
+      ]
+    },
+    calc: {
+      label: 'Governor Trip — Mechanical',
+      inputs: [
+        { id: 't5_rated', label: 'Rated speed', unit: 'fpm', placeholder: '0' },
+        { id: 't5_mtrip', label: 'Mech trip speed (measured)', unit: 'fpm', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const rs = parseFloat(v.t5_rated);
+        const ts = parseFloat(v.t5_mtrip);
+        if (isNaN(rs) || isNaN(ts)) return { state: 'pending', text: 'Enter rated and trip speeds.' };
+        const min = rs * 1.15;
+        // A17.1 Table 2.18.2.1 max trip speeds (approximate, for reference — verify in code):
+        // ≤125 fpm: 175; 150: 210; 175: 250; 200: 280; 250: 337; 300: 395; 350: 452; 400: 510; 500: 625; etc.
+        const table = [
+          { rated: 125, max: 175 },
+          { rated: 150, max: 210 },
+          { rated: 175, max: 250 },
+          { rated: 200, max: 280 },
+          { rated: 250, max: 337 },
+          { rated: 300, max: 395 },
+          { rated: 350, max: 452 },
+          { rated: 400, max: 510 },
+          { rated: 500, max: 625 },
+          { rated: 600, max: 740 },
+          { rated: 700, max: 855 },
+          { rated: 800, max: 970 },
+          { rated: 1000, max: 1200 }
+        ];
+        let max = null;
+        for (const row of table) { if (rs <= row.rated) { max = row.max; break; } }
+        if (max === null) max = rs * 1.20;
+        const pass = ts >= min && ts <= max;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'WITHIN RANGE' : 'OUT OF RANGE',
+          value: ts.toFixed(0) + ' fpm · range ' + min.toFixed(0) + '–' + max.toFixed(0) + ' fpm',
+          detail: 'A17.1 §2.18.2.1: min 115% rated; max per Table 2.18.2.1. Verify against printed code table for your exact rated speed.'
+        };
+      }
+    }
+  },
+
+  { id: 'T5.4', title: 'Oil Buffer Test — Car & Counterweight', ref: 'A17.1 §2.22',
+    desc: 'With rated load (car buffer) or no load (counterweight buffer), strike buffer at rated speed. Verify full compression, return to extended position within 90 s, no oil loss, average retardation ≤ 32.2 ft/s² (1g), peak ≤ 2.5g for 0.04 s.',
+    calc: {
+      label: 'Buffer Recovery & Retardation',
+      inputs: [
+        { id: 't5_buf_speed', label: 'Impact speed', unit: 'fpm', placeholder: '0' },
+        { id: 't5_buf_stroke', label: 'Buffer stroke', unit: 'in', placeholder: '0' },
+        { id: 't5_buf_recover', label: 'Recovery time', unit: 'sec', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const sp = parseFloat(v.t5_buf_speed);
+        const st = parseFloat(v.t5_buf_stroke);
+        const rt = parseFloat(v.t5_buf_recover);
+        if (isNaN(sp) || isNaN(st) || isNaN(rt)) return { state: 'pending', text: 'Enter impact speed, stroke, recovery time.' };
+        const v_fps = sp / 60;
+        const st_ft = st / 12;
+        const a = st_ft > 0 ? (v_fps*v_fps) / (2*st_ft) : 0;
+        const a_g = a / 32.2;
+        const recOk = rt <= 90;
+        const accelOk = a <= 32.2;
+        const pass = recOk && accelOk;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'COMPLIANT' : 'CHECK CONDITION',
+          value: 'avg retard ' + a.toFixed(1) + ' ft/s² (' + a_g.toFixed(2) + 'g) · recover ' + rt.toFixed(0) + ' s',
+          detail: 'Avg retard ≤ 32.2 ft/s² (1g); recovery ≤ 90 s; peak (separate measurement) ≤ 2.5g for 0.04 s.'
+        };
+      }
+    }
+  },
+
+  { id: 'T5.5', title: 'Brake Hold — 125% Rated Load', ref: 'A17.1 §2.24.8.3',
+    desc: 'Place 125% of rated load on car at lowest landing. Verify brake holds without slipping.',
+    calc: {
+      label: '125% Test Load',
+      inputs: [
+        { id: 't5_cap', label: 'Rated capacity', unit: 'lb', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const c = parseFloat(v.t5_cap);
+        if (isNaN(c)) return { state: 'pending', text: 'Enter rated capacity.' };
+        const req = c * 1.25;
+        return {
+          state: 'pass',
+          label: 'REQUIRED TEST LOAD',
+          value: req.toFixed(0) + ' lb',
+          detail: 'Place ' + req.toFixed(0) + ' lb in car (1.25 × ' + c.toFixed(0) + ' lb). Verify brake holds with no slip.'
+        };
+      }
+    }
+  },
+
+  { id: 'T5.6', title: 'Ascending Car Overspeed Protection (ACOP)', ref: 'A17.1 §2.19.1 / 8.10.2.2.7',
+    desc: 'Required for all traction (A17.1 §2.19.1). With <strong>empty car</strong> ascending, drive system overspeed condition (typically using auxiliary control or by simulating governor up-trip). Device must either stop car or reduce speed to no greater than rated speed. Average retardation must not exceed <strong>32.2 ft/s² (1g)</strong>. Device must engage before counterweight strikes buffer at greater than 115% rated speed. After test: verify reset procedure, check rope brake / grippers / sheave brake (whichever ACOP uses) for marking, and confirm electrical contact reset.',
+    calc: {
+      label: 'ACOP Retardation Verification',
+      inputs: [
+        { id: 't5_acop_speed', label: 'Speed at ACOP activation', unit: 'fpm', placeholder: '0' },
+        { id: 't5_acop_dist', label: 'Stopping distance', unit: 'in', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const sp = parseFloat(v.t5_acop_speed);
+        const sd = parseFloat(v.t5_acop_dist);
+        if (isNaN(sp) || isNaN(sd)) return { state: 'pending', text: 'Enter activation speed and stopping distance.' };
+        const v_fps = sp / 60;
+        const sd_ft = sd / 12;
+        const a = sd_ft > 0 ? (v_fps*v_fps) / (2 * sd_ft) : 0;
+        const a_g = a / 32.2;
+        const pass = a <= 32.2 && a > 0;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'WITHIN 1g LIMIT' : 'EXCEEDS 1g',
+          value: 'avg retard ' + a.toFixed(1) + ' ft/s² (' + a_g.toFixed(2) + 'g)',
+          detail: 'Avg retardation must not exceed 32.2 ft/s² (1g) per A17.1 §2.19.1.2. Stop distance ' + sd.toFixed(1) + ' in from ' + sp.toFixed(0) + ' fpm.'
+        };
+      }
+    }
+  },
+
+  { id: 'T5.7', title: 'Unintended Car Movement (UCM)', ref: 'A17.1 §2.19.2 / 8.10.2.2.8',
+    desc: 'Simulate unintended car movement from a landing with car doors in any position other than fully closed. UCM device must stop car within the unlocking zone such that car sill remains within <strong>1.2 m (47.24 in / ~48 in)</strong> of the landing sill. Verify both up and down movement scenarios. Device cannot rely solely on brake — must use independent means (rope gripper, sheave brake, secondary brake, or equivalent).',
+    calc: {
+      label: 'UCM Stopping Distance',
+      inputs: [
+        { id: 't5_ucm_dist', label: 'Sill displacement after stop', unit: 'in', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const d = parseFloat(v.t5_ucm_dist);
+        if (isNaN(d)) return { state: 'pending', text: 'Enter measured sill displacement.' };
+        const max = 47.24; // 1.2 m
+        const pass = d <= max;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'WITHIN ZONE' : 'EXCEEDS ZONE',
+          value: d.toFixed(1) + ' in · max ' + max.toFixed(2) + ' in (1.2 m)',
+          detail: 'A17.1 §2.19.2: car sill must remain within 1.2 m of landing sill after UCM stop. Verify exact limit against your code edition.'
+        };
+      }
+    }
+  },
+
+  { id: 'T5.8', title: 'Standby Power — Rated Load', ref: 'A17.1 §2.27.2',
+    desc: 'Transfer to standby power with rated load. Verify selected car operates per design intent and returns to designated floor.' },
+
+  { id: 'T5.9', title: 'Suspension Rope Inspection', ref: 'A17.1 §8.6.4',
+    desc: 'Full rope inspection: broken wires per strand, wear, corrosion, lubrication, equalization of tension. Record dates of last shortening / replacement.' },
+
+  { id: 'T5.10', title: 'Static Load Test — Suspension Means', ref: 'A17.1 §8.10.2.2.5',
+    desc: 'For non-circular suspension (belts, coated steel): conduct static load test per A17.1 / manufacturer requirements.' }
+],
+
+/* ---------- ESCALATOR CAT 1 (ANNUAL) ---------- */
+escalator_cat1: [
+  { id: 'E1.1', title: 'Step / Pallet Visual Inspection', ref: 'A17.1 §6.1 · A17.2 §8.X',
+    desc: 'Inspect step treads, risers, demarcation lines, cleat condition, step rollers, and chains. Check for cracked, missing, or worn steps.' },
+
+  { id: 'E1.2', title: 'No-Load Running Speed', ref: 'A17.1 §6.1.4.1',
+    desc: 'Measure step speed at no load. Must be within ±5% of rated speed.',
+    calc: {
+      label: 'Speed Verification (No Load)',
+      inputs: [
+        { id: 'e1_rated', label: 'Rated speed', unit: 'fpm', placeholder: '100' },
+        { id: 'e1_measured', label: 'Measured no-load speed', unit: 'fpm', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const rs = parseFloat(v.e1_rated);
+        const ms = parseFloat(v.e1_measured);
+        if (isNaN(rs) || isNaN(ms)) return { state: 'pending', text: 'Enter rated and measured speeds.' };
+        const dev = ((ms - rs) / rs) * 100;
+        const pass = Math.abs(dev) <= 5;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'COMPLIANT' : 'EXCEEDS ±5%',
+          value: ms.toFixed(1) + ' fpm · ' + (dev >= 0 ? '+' : '') + dev.toFixed(2) + '%',
+          detail: 'Allowed deviation: ±5% of rated (A17.1 §6.1.4.1). Range: ' + (rs*0.95).toFixed(1) + '–' + (rs*1.05).toFixed(1) + ' fpm.'
+        };
+      }
+    }
+  },
+
+  { id: 'E1.3', title: 'Handrail Speed', ref: 'A17.1 §6.1.3.5',
+    desc: 'Handrail must travel at same speed as steps, with tolerance of -0% / +2% relative to step speed.',
+    calc: {
+      label: 'Handrail Speed Match',
+      inputs: [
+        { id: 'e1_step', label: 'Step speed (measured)', unit: 'fpm', placeholder: '0' },
+        { id: 'e1_hr', label: 'Handrail speed (measured)', unit: 'fpm', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const ss = parseFloat(v.e1_step);
+        const hs = parseFloat(v.e1_hr);
+        if (isNaN(ss) || isNaN(hs)) return { state: 'pending', text: 'Enter step and handrail speeds.' };
+        const dev = ((hs - ss) / ss) * 100;
+        const pass = dev >= 0 && dev <= 2;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'WITHIN TOLERANCE' : 'OUT OF RANGE',
+          value: hs.toFixed(1) + ' fpm · ' + (dev >= 0 ? '+' : '') + dev.toFixed(2) + '% vs step',
+          detail: 'Allowed: −0% to +2% of step speed. Range: ' + ss.toFixed(1) + '–' + (ss*1.02).toFixed(1) + ' fpm.'
+        };
+      }
+    }
+  },
+
+  { id: 'E1.4', title: 'Stopping Distance — No Load, Down', ref: 'A17.1 §6.1.5.3',
+    desc: 'Activate stop switch with escalator running down empty. Measure step travel from initiation to complete stop.',
+    referenceTable: {
+      title: 'Escalator Stopping Distance — No Load',
+      ref: 'A17.1 §6.1.5.3.1',
+      note: 'Minimum prevents excessive deceleration (passenger ejection risk); maximum ensures positive stop. Calculator interpolates between entries for rated speeds in between.',
+      columns: ['Rated Speed (fpm)', 'Min Stop (ft)', 'Max Stop (ft)', 'Min Stop (in)', 'Max Stop (in)'],
+      rows: [
+        ['75', '0.30', '1.50', '3.60', '18.0'],
+        ['90', '0.36', '2.16', '4.32', '25.9'],
+        ['100', '0.44', '2.67', '5.28', '32.0'],
+        ['110', '0.53', '3.25', '6.36', '39.0'],
+        ['120', '0.63', '3.85', '7.56', '46.2'],
+        ['125', '0.69', '4.17', '8.28', '50.0']
+      ]
+    },
+    calc: {
+      label: 'Stopping Distance (Down, No Load)',
+      inputs: [
+        { id: 'e1_sd_speed', label: 'Operating speed', unit: 'fpm', placeholder: '100' },
+        { id: 'e1_sd_dist', label: 'Measured stop distance', unit: 'ft', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const sp = parseFloat(v.e1_sd_speed);
+        const sd = parseFloat(v.e1_sd_dist);
+        if (isNaN(sp) || isNaN(sd)) return { state: 'pending', text: 'Enter speed and distance.' };
+        // A17.1 §6.1.5.3.1 table (selected values):
+        const table = [
+          { s: 75,  min: 0.30, max: 1.50 },
+          { s: 90,  min: 0.36, max: 2.16 },
+          { s: 100, min: 0.44, max: 2.67 },
+          { s: 110, min: 0.53, max: 3.25 },
+          { s: 120, min: 0.63, max: 3.85 },
+          { s: 125, min: 0.69, max: 4.17 }
+        ];
+        // Linear interp for min/max
+        let min, max;
+        if (sp <= table[0].s) { min = table[0].min; max = table[0].max; }
+        else if (sp >= table[table.length-1].s) { min = table[table.length-1].min; max = table[table.length-1].max; }
+        else {
+          for (let i = 0; i < table.length-1; i++) {
+            if (sp >= table[i].s && sp <= table[i+1].s) {
+              const f = (sp - table[i].s) / (table[i+1].s - table[i].s);
+              min = table[i].min + f * (table[i+1].min - table[i].min);
+              max = table[i].max + f * (table[i+1].max - table[i].max);
+              break;
+            }
+          }
+        }
+        const pass = sd >= min && sd <= max;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'WITHIN RANGE' : 'OUT OF RANGE',
+          value: sd.toFixed(2) + ' ft · range ' + min.toFixed(2) + '–' + max.toFixed(2) + ' ft',
+          detail: 'A17.1 §6.1.5.3.1 — interpolated for ' + sp + ' fpm. Verify against printed table for exact values.'
+        };
+      }
+    }
+  },
+
+  { id: 'E1.5', title: 'Stopping Distance — No Load, Up', ref: 'A17.1 §6.1.5.3',
+    desc: 'Same as E1.4 but in up direction (or simulated braking under up direction load conditions).' },
+
+  { id: 'E1.6', title: 'Stop Switches (Newel End Buttons)', ref: 'A17.1 §6.1.6.3.1',
+    desc: 'Activate stop button at upper and lower newel. Verify escalator stops, brake sets, and reset procedure required to restart.' },
+
+  { id: 'E1.7', title: 'Step Level Device', ref: 'A17.1 §6.1.6.3.3',
+    desc: 'Disable / simulate fault on step level sensor. Verify escalator stops before defective step enters comb plate.' },
+
+  { id: 'E1.8', title: 'Step Upthrust Device', ref: 'A17.1 §6.1.6.3.4',
+    desc: 'Verify step upthrust device stops escalator if step lifts away from track.' },
+
+  { id: 'E1.9', title: 'Missing Step Device', ref: 'A17.1 §6.1.6.3.5',
+    desc: 'Test detector (typically photo eye / mechanical) — verify escalator stops within prescribed distance when step is missing.' },
+
+  { id: 'E1.10', title: 'Broken Step Chain Device', ref: 'A17.1 §6.1.6.3.7',
+    desc: 'Verify device removes power and applies brake on excessive step chain elongation / breakage. Inspect tension spring and limit switch.' },
+
+  { id: 'E1.11', title: 'Broken Drive Chain Device', ref: 'A17.1 §6.1.6.3.8',
+    desc: 'Verify drive chain monitoring removes power on chain failure or excessive slack.' },
+
+  { id: 'E1.12', title: 'Reversal Stop Device', ref: 'A17.1 §6.1.6.3.9',
+    desc: 'Verify device stops escalator if unit reverses direction (descends while operating up, or vice versa) with passengers.' },
+
+  { id: 'E1.13', title: 'Comb Plate Impact Device — Both Ends, Both Directions', ref: 'A17.1 §6.1.6.3.11',
+    desc: 'Test horizontal and vertical impact stops at upper and lower comb plates. Apply force per manufacturer spec; verify escalator stops.' },
+
+  { id: 'E1.14', title: 'Handrail Entry / Inlet Device', ref: 'A17.1 §6.1.6.3.10',
+    desc: 'Insert test object into handrail inlet. Verify escalator stops and inlet guard is intact.' },
+
+  { id: 'E1.15', title: 'Handrail Speed Monitor', ref: 'A17.1 §6.1.6.3.6',
+    desc: 'Verify monitor stops escalator if handrail speed deviates from step speed beyond limits or stops.' },
+
+  { id: 'E1.16', title: 'Skirt Obstruction Device', ref: 'A17.1 §6.1.6.3.12',
+    desc: 'Test skirt obstruction detector (force or proximity) at both upper and lower halves of each balustrade.' },
+
+  { id: 'E1.17', title: 'Step / Skirt Clearance', ref: 'A17.1 §6.1.3.3',
+    desc: 'Measure clearance between step tread/riser and skirt panel. Maximum: 3/16 in (4.8 mm) on each side, sum of both sides ≤ 1/4 in (6 mm).',
+    calc: {
+      label: 'Skirt Clearance',
+      inputs: [
+        { id: 'e1_skirt_l', label: 'Left side clearance', unit: 'in', placeholder: '0.000' },
+        { id: 'e1_skirt_r', label: 'Right side clearance', unit: 'in', placeholder: '0.000' }
+      ],
+      compute: (v) => {
+        const l = parseFloat(v.e1_skirt_l);
+        const r = parseFloat(v.e1_skirt_r);
+        if (isNaN(l) || isNaN(r)) return { state: 'pending', text: 'Enter both clearances.' };
+        const sum = l + r;
+        const indMax = 3/16;
+        const sumMax = 1/4;
+        const pass = l <= indMax && r <= indMax && sum <= sumMax;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'COMPLIANT' : 'EXCEEDS LIMIT',
+          value: 'L: ' + l.toFixed(3) + '" · R: ' + r.toFixed(3) + '" · Σ: ' + sum.toFixed(3) + '"',
+          detail: 'Each side ≤ 3/16" (0.188"); sum ≤ 1/4" (0.250"). A17.1 §6.1.3.3.'
+        };
+      }
+    }
+  },
+
+  { id: 'E1.18', title: 'Skirt Deflector', ref: 'A17.1 §6.1.3.3.5',
+    desc: 'Inspect skirt deflector continuity, no gaps, secure mounting, and that ends are tapered/turned away from step.' },
+
+  { id: 'E1.19', title: 'Brake — No Load', ref: 'A17.1 §6.1.5.3.4',
+    desc: 'Apply main brake from operating speed. Stopping distance must fall within Cat 1 table values (see E1.4).' },
+
+  { id: 'E1.20', title: 'Lighting — Combplate, Balustrade, Machinery', ref: 'A17.1 §6.1.3.6',
+    desc: 'Verify required lighting levels at combplates, along run, and at machinery spaces.' },
+
+  { id: 'E1.21', title: 'Emergency Stop Function & Signage', ref: 'A17.1 §6.1.6.3.1',
+    desc: 'Verify "EMERGENCY STOP" cover, audible alarm on activation (where required), and signage compliance.' },
+
+  { id: 'E1.22', title: 'Caution Signs / Operating Instructions', ref: 'A17.1 §6.1.6.5',
+    desc: 'Confirm presence and condition of required caution signs (handrail use, no strollers, etc.) at both ends.' },
+
+  { id: 'E1.23', title: 'Step/Skirt Performance Index', ref: 'A17.1-2019 §6.1.3.3.9 / §8.6.8.3',
+    desc: 'Required dynamic test of friction-clearance relationship between step and skirt panel. Test uses polycarbonate specimen (<strong>GE Lexan 100 series or equivalent</strong>, 4.5 ± 0.5 in² contact area) with <strong>25 lbf ± 2.5 lbf</strong> normal load applied from step to skirt. Skirt panel must <strong>NOT</strong> have field-applied lubricant. Most skirtmeter devices report the index directly. Formula: index = e^y/(e^y+1), where y = -3.77 + 2.37μ + 0.37·Lg (SI, Lg in mm). <strong>Required in Florida (Violation 717)</strong> and most other jurisdictions for escalators.',
+    calc: {
+      label: 'Step/Skirt Performance Index',
+      inputs: [
+        { id: 'e23_index', label: 'Max recorded index (highest of all measurement points)', unit: '—', placeholder: '0.150' },
+        { id: 'e23_limit', label: 'Applicable limit (see notes)', unit: '—', placeholder: '0.15' }
+      ],
+      compute: (v) => {
+        const idx = parseFloat(v.e23_index);
+        const lim = parseFloat(v.e23_limit);
+        if (isNaN(idx) || isNaN(lim)) return { state: 'pending', text: 'Enter max measured index and applicable limit.' };
+        const pass = idx <= lim;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'COMPLIANT' : 'EXCEEDS LIMIT',
+          value: idx.toFixed(3) + ' · limit ' + lim.toFixed(2),
+          detail: 'Limits per A17.1 §8.6.8.3.3: 0.15 standard; 0.25 (A17.1a-2002 and later with code-compliant skirt deflector per §6.1.3.3.10); 0.40 (A17.1-2000 and earlier with deflector).'
+        };
+      }
+    }
+  }
+],
+
+/* ---------- ESCALATOR CAT 5 ---------- */
+escalator_cat5: [
+  { id: 'E5.1', title: 'Brake Test — Rated Load (where required)', ref: 'A17.1 §6.1.5.3.4 / 8.11.5',
+    desc: 'Where applicable per code/AHJ: verify stopping distance with rated brake load. Verify brake adjustment per manufacturer.' },
+
+  { id: 'E5.2', title: 'Auxiliary Brake (where equipped)', ref: 'A17.1 §6.1.5.3.5',
+    desc: 'Required where rise exceeds 20 ft (6 m) or in some jurisdictions for all units. Test auxiliary brake independently of main brake. Verify stopping under load conditions per code.' },
+
+  { id: 'E5.3', title: 'Speed Governor (where equipped)', ref: 'A17.1 §6.1.5.3.6',
+    desc: 'Test overspeed governor — must stop escalator before reaching 1.4× rated speed. Verify reset procedure.',
+    calc: {
+      label: 'Governor Trip Speed',
+      inputs: [
+        { id: 'e5_rated', label: 'Rated speed', unit: 'fpm', placeholder: '100' },
+        { id: 'e5_trip', label: 'Measured trip speed', unit: 'fpm', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const rs = parseFloat(v.e5_rated);
+        const ts = parseFloat(v.e5_trip);
+        if (isNaN(rs) || isNaN(ts)) return { state: 'pending', text: 'Enter rated and trip speeds.' };
+        const max = rs * 1.4;
+        const pass = ts <= max;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'COMPLIANT' : 'EXCEEDS LIMIT',
+          value: ts.toFixed(1) + ' fpm · max ' + max.toFixed(1) + ' fpm',
+          detail: 'Must trip before 140% of rated. Currently ' + (ts/rs*100).toFixed(1) + '%.'
+        };
+      }
+    }
+  },
+
+  { id: 'E5.4', title: 'Step Chain & Tension Carriage', ref: 'A17.1 §6.1.3.10',
+    desc: 'Cat 5 detailed inspection: chain elongation, pin wear, tension carriage travel, sprocket condition. Replace if outside manufacturer tolerance.' },
+
+  { id: 'E5.5', title: 'Drive / Step Chain — Pull Test', ref: 'AHJ-dependent',
+    desc: 'Some jurisdictions require pull-load testing of step chain at Cat 5 or per manufacturer interval. Verify with AHJ.' }
+],
+
+/* ---------- MRL ADDENDUM CAT 1 ---------- */
+/* These items apply IN ADDITION to standard Traction (or Hydraulic) Cat 1 items
+   for machine-room-less installations. Some items are technically applicable to
+   conventional installations but are universally present on MRL and more
+   commonly inspected on MRL units. */
+mrl_cat1: [
+  { id: 'MRL1.1', applies: 'all',
+    title: 'Inspection Operation Control Station — Hoistway / Pit',
+    ref: 'A17.1 §2.26.1.4 / 2.7.5',
+    desc: 'MRL controllers and inspection stations are typically located in the hoistway, at top of car, or in an adjacent control space. Verify station is reachable safely without entering hoistway under power, that constant-pressure operation works at reduced speed (≤ 150 fpm), and that all stop switches function from the station. Confirm station marking and key/lockout.' },
+
+  { id: 'MRL1.2', applies: 'all',
+    title: 'Machinery Space Access Switch',
+    ref: 'A17.1 §2.7.5 / 2.7.6',
+    desc: 'Switch (typically key-operated) at hoistway access door or machine-control space access disables normal operation when machinery is being accessed. Verify operation disables normal use and that car will not run on automatic operation.' },
+
+  { id: 'MRL1.3', applies: 'all',
+    title: 'Pit Access Switch / Pit Stop Switch',
+    ref: 'A17.1 §2.7.5.1 / 2.26.2.5',
+    desc: 'Required at pit access ladder/door (and at additional locations in deep pits). Activate switch before entering pit; verify car will not run. Test stop switch in pit (separate switch at pit floor) — must require manual reset to restore service.' },
+
+  { id: 'MRL1.4', applies: 'all',
+    title: 'Brake Monitoring / Self-Test',
+    ref: 'A17.1 §2.24.8.4',
+    desc: 'MRL machines typically use dual brakes with monitoring per A17.1 §2.24.8.4. Verify controller monitors each brake operation independently and prevents operation if a brake fails to set/release. Check fault log and self-test indicators per manufacturer.' },
+
+  { id: 'MRL1.5', applies: 'all',
+    title: 'Manual Brake Release (Remote Actuator)',
+    ref: 'A17.1 §2.26.6',
+    desc: 'MRL brake release is typically remote-actuated (cable, hand-pump, or electric release) from machinery space or designated landing. Verify release device functions, that car movement is controlled (limited speed governor / centrifugal device), and that release procedure is posted with manual evacuation instructions.' },
+
+  { id: 'MRL1.6', applies: 'all',
+    title: 'Emergency / Manual Evacuation Procedure',
+    ref: 'A17.1 §2.26.6 / 2.27.1',
+    desc: 'Validate posted manual evacuation procedure with personnel familiar with the equipment. Verify required tools are on-site, accessible to authorized personnel, and procedure is current for this specific machine.' },
+
+  { id: 'MRL1.7', applies: 'all',
+    title: 'Auxiliary Power Lowering (where equipped)',
+    ref: 'A17.1 §2.27.2',
+    desc: 'Where MRL is equipped with battery/UPS-powered emergency lowering: simulate power failure. Verify car moves to nearest landing at reduced speed and doors open. Check battery condition and runtime.' },
+
+  { id: 'MRL1.8', applies: 'all',
+    title: 'Refuge Spaces — Top of Car & Pit',
+    ref: 'A17.1 §2.4.7 / 2.7.3',
+    desc: 'Many MRLs have reduced overhead/pit dimensions and rely on refuge spaces or compensating devices. Verify clearance marking, refuge stickers, and any mechanically-deployed safety devices (collapsible balustrades, retractable bumpers) function correctly.' },
+
+  { id: 'MRL1.9', applies: 'all',
+    title: 'Working Platform / Top-of-Car Stop',
+    ref: 'A17.1 §2.7.3',
+    desc: 'Verify top-of-car operating device, guard rails (where required by car-top size), and stop switch operate correctly. Confirm controller transitions to inspection on top-of-car switch activation.' },
+
+  { id: 'MRL1.10', applies: 'conditional', condition: 'Low-overhead MRL with reduced runby',
+    title: 'Counterweight Runby — Reduced Overhead',
+    ref: 'A17.1 §2.4.6',
+    desc: 'Measure counterweight runby. Low-overhead MRLs often have reduced runby compensated by other means (e.g., guarded refuge space, mechanical bumpers). Verify within design and that any compensating device is functional.' },
+
+  { id: 'MRL1.11', applies: 'all',
+    title: 'Hoistway Lighting Controlled from Outside',
+    ref: 'A17.1 §2.7.9.1',
+    desc: 'Verify hoistway lighting can be turned on from outside the hoistway before entry. Light switch must be accessible at the hoistway access point.' },
+
+  { id: 'MRL1.12', applies: 'conditional', condition: 'If equipped with sheave/rope brake as primary or auxiliary',
+    title: 'Sheave Brake / Rope Brake — Operational Check',
+    ref: 'A17.1 §2.24 / 2.19',
+    desc: 'Many MRLs use a sheave-mounted secondary brake or rope brake as the ACOP/UCM device. Verify visual condition, electrical contact operation, and that controller self-test confirms readiness. Full functional test at Cat 5.' }
+],
+
+/* ---------- MRL ADDENDUM CAT 5 ---------- */
+mrl_cat5: [
+  { id: 'MRL5.1', applies: 'all',
+    title: 'Dual Brake Test — Each Brake Independently @ 125% Rated Load',
+    ref: 'A17.1 §2.24.8.3 / 2.24.8.4',
+    desc: 'MRL machines with dual brakes must be tested with each brake individually disabled, while the other holds 125% of rated load. Verify each brake independently holds the test load with no slip. This is the critical MRL Cat 5 test.',
+    calc: {
+      label: 'Dual Brake Test Load',
+      inputs: [
+        { id: 'mrl5_cap', label: 'Rated capacity', unit: 'lb', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const c = parseFloat(v.mrl5_cap);
+        if (isNaN(c)) return { state: 'pending', text: 'Enter rated capacity.' };
+        const req = c * 1.25;
+        return {
+          state: 'pass',
+          label: 'REQUIRED TEST LOAD',
+          value: req.toFixed(0) + ' lb',
+          detail: 'Load car with ' + req.toFixed(0) + ' lb (1.25 × ' + c.toFixed(0) + '). Test Brake A alone, then Brake B alone. Each must hold without slip.'
+        };
+      }
+    }
+  },
+
+  { id: 'MRL5.2', applies: 'all',
+    title: 'Single Brake Failure Simulation',
+    ref: 'A17.1 §2.24.8.4',
+    desc: 'Disable one brake (controller fault simulation per manufacturer procedure). Verify controller detects the fault, alarms, and prevents operation OR transitions to safe mode per design. Restore and verify normal operation resumes only after fault cleared.' },
+
+  { id: 'MRL5.3', applies: 'conditional', condition: 'If sheave/rope brake serves as ACOP or UCM',
+    title: 'Sheave Brake / Rope Brake — Full Functional Test',
+    ref: 'A17.1 §2.19 / 8.10.2.2',
+    desc: 'Activate device under load conditions per manufacturer. If serving as ACOP: empty car ascending, verify stop within retardation limits. If serving as UCM: simulate door-open movement, verify stop within unlocking zone. Inspect rope/sheave for damage after test.' },
+
+  { id: 'MRL5.4', applies: 'all',
+    title: 'Manual Emergency Operation — Full Procedure',
+    ref: 'A17.1 §2.26.6',
+    desc: 'Conduct a complete manual evacuation drill: brake release device, controlled lowering, door unlock at landing, passenger removal. Time the procedure. Verify all required tools are present, accessible, and functional. Update posted procedure if needed.' },
+
+  { id: 'MRL5.5', applies: 'all',
+    title: 'Controller Self-Diagnostics Review',
+    ref: 'A17.1 §2.26.4 / 8.6',
+    desc: 'Review controller fault log over the 5-year period. Investigate recurring faults. Verify all safety-relevant fault codes have been addressed. Document with screen captures or printout where possible.' },
+
+  { id: 'MRL5.6', applies: 'conditional', condition: 'Low-overhead or reduced-pit MRL',
+    title: 'Mechanical Refuge Device Functional Test',
+    ref: 'A17.1 §2.4.7 / 2.7.3',
+    desc: 'For MRLs using collapsible/retractable refuge devices (mechanical balustrades, retractable bumpers, deployable buffers): test deployment, position monitoring, and that controller prevents normal operation when device is deployed.' }
+],
+
+/* ---------- MOVING WALK CAT 1 ---------- */
+movingwalk_cat1: [
+  { id: 'MW1.1', title: 'Treadway / Pallet Visual', ref: 'A17.1 §6.2',
+    desc: 'Inspect pallet treads, demarcation, edge clearances, and continuous belt condition (if belt type).' },
+
+  { id: 'MW1.2', title: 'No-Load Speed', ref: 'A17.1 §6.2.4',
+    desc: 'Verify treadway speed within ±5% of rated.',
+    calc: {
+      label: 'Speed Verification',
+      inputs: [
+        { id: 'mw1_rated', label: 'Rated speed', unit: 'fpm', placeholder: '180' },
+        { id: 'mw1_meas', label: 'Measured speed', unit: 'fpm', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const rs = parseFloat(v.mw1_rated);
+        const ms = parseFloat(v.mw1_meas);
+        if (isNaN(rs) || isNaN(ms)) return { state: 'pending', text: 'Enter speeds.' };
+        const dev = ((ms - rs)/rs) * 100;
+        const pass = Math.abs(dev) <= 5;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'COMPLIANT' : 'OUT OF RANGE',
+          value: ms.toFixed(1) + ' fpm · ' + (dev >= 0 ? '+' : '') + dev.toFixed(2) + '%',
+          detail: '±5% of rated. Note: moving walks may be rated up to 180 fpm (palette) or 200 fpm (belt) per A17.1.'
+        };
+      }
+    }
+  },
+
+  { id: 'MW1.3', title: 'Handrail Speed', ref: 'A17.1 §6.2.3.5',
+    desc: 'Handrail speed: -0% to +2% relative to treadway. Test both sides.',
+    calc: {
+      label: 'Handrail Speed Match',
+      inputs: [
+        { id: 'mw1_tread', label: 'Treadway speed', unit: 'fpm', placeholder: '0' },
+        { id: 'mw1_hr', label: 'Handrail speed', unit: 'fpm', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const ts = parseFloat(v.mw1_tread);
+        const hs = parseFloat(v.mw1_hr);
+        if (isNaN(ts) || isNaN(hs)) return { state: 'pending', text: 'Enter speeds.' };
+        const dev = ((hs - ts)/ts) * 100;
+        const pass = dev >= 0 && dev <= 2;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'WITHIN RANGE' : 'OUT OF RANGE',
+          value: hs.toFixed(1) + ' fpm · ' + (dev >= 0 ? '+' : '') + dev.toFixed(2) + '%',
+          detail: 'Allowed: −0% / +2% of treadway.'
+        };
+      }
+    }
+  },
+
+  { id: 'MW1.4', title: 'Stopping Distance', ref: 'A17.1 §6.2.5',
+    desc: 'Measure stopping distance from rated speed. Maximum varies by speed; reference A17.1 §6.2.5 table for your unit.',
+    calc: {
+      label: 'Stopping Distance Check',
+      inputs: [
+        { id: 'mw1_speed', label: 'Operating speed', unit: 'fpm', placeholder: '180' },
+        { id: 'mw1_sd', label: 'Measured stop', unit: 'ft', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const sp = parseFloat(v.mw1_speed);
+        const sd = parseFloat(v.mw1_sd);
+        if (isNaN(sp) || isNaN(sd)) return { state: 'pending', text: 'Enter speed and distance.' };
+        // Approximate moving walk stopping distance per A17.1 §6.2.5 (slope-dependent).
+        // For 0° to 3° (level/near-level): ranges scale up to ~5.0 ft at 180 fpm.
+        // This is a rough range — verify against printed table for the specific slope angle.
+        const v_fps = sp / 60;
+        const minA = 4.9; // ft/s² min retard (≈ escalator equivalent)
+        const maxA = 32.2; // ft/s² max (1g)
+        const minSD = (v_fps*v_fps) / (2 * maxA);
+        const maxSD = (v_fps*v_fps) / (2 * minA);
+        const pass = sd >= minSD && sd <= maxSD;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'WITHIN COMPUTED RANGE' : 'OUTSIDE RANGE',
+          value: sd.toFixed(2) + ' ft · est range ' + minSD.toFixed(2) + '–' + maxSD.toFixed(2) + ' ft',
+          detail: 'Estimate based on 1g max / 4.9 ft/s² min retardation. CONFIRM against A17.1 §6.2.5 table for exact slope of your unit.'
+        };
+      }
+    }
+  },
+
+  { id: 'MW1.5', title: 'Stop Switches (Both Ends)', ref: 'A17.1 §6.2.6',
+    desc: 'Activate stop switches at each end. Verify stop, brake set, manual reset required.' },
+
+  { id: 'MW1.6', title: 'Missing Pallet / Skirt Device', ref: 'A17.1 §6.2.6',
+    desc: 'Pallet type: verify missing pallet detector. Belt type: verify belt position/skew monitoring.' },
+
+  { id: 'MW1.7', title: 'Broken Pallet/Belt Chain', ref: 'A17.1 §6.2.6',
+    desc: 'Verify monitoring of pallet chain (or belt drive) — must remove power on excessive elongation / failure.' },
+
+  { id: 'MW1.8', title: 'Comb Plate Impact Device', ref: 'A17.1 §6.2.6',
+    desc: 'Test horizontal/vertical impact stop at each comb plate end.' },
+
+  { id: 'MW1.9', title: 'Reversal Stop Device', ref: 'A17.1 §6.2.6',
+    desc: 'Verify reversal protection (especially on inclined moving walks).' },
+
+  { id: 'MW1.10', title: 'Handrail Entry / Inlet Device', ref: 'A17.1 §6.2.6',
+    desc: 'Test handrail inlet stop devices at both ends.' },
+
+  { id: 'MW1.11', title: 'Handrail Speed Monitor', ref: 'A17.1 §6.2.6',
+    desc: 'Verify monitor stops walk on handrail speed deviation or stoppage.' },
+
+  { id: 'MW1.12', title: 'Comb / Pallet Clearance', ref: 'A17.1 §6.2.3',
+    desc: 'Measure clearance between pallet/belt and comb teeth. Verify intermeshing depth and lateral alignment.' },
+
+  { id: 'MW1.13', title: 'Brake — No Load', ref: 'A17.1 §6.2.5',
+    desc: 'Verify main brake stops walk within code range from operating speed (see MW1.4).' }
+],
+
+/* ---------- MOVING WALK CAT 5 ---------- */
+movingwalk_cat5: [
+  { id: 'MW5.1', title: 'Brake — Loaded (where required)', ref: 'AHJ / A17.1 §6.2.5',
+    desc: 'Where required: test brake stopping distance under loaded conditions.' },
+
+  { id: 'MW5.2', title: 'Auxiliary Brake (if equipped)', ref: 'A17.1 §6.2.5',
+    desc: 'Test auxiliary brake on inclined moving walks where required.' },
+
+  { id: 'MW5.3', title: 'Speed Governor (if equipped)', ref: 'A17.1 §6.2.5',
+    desc: 'Test overspeed governor — must trip before 140% of rated speed.',
+    calc: {
+      label: 'Governor Trip',
+      inputs: [
+        { id: 'mw5_rated', label: 'Rated speed', unit: 'fpm', placeholder: '180' },
+        { id: 'mw5_trip', label: 'Trip speed', unit: 'fpm', placeholder: '0' }
+      ],
+      compute: (v) => {
+        const rs = parseFloat(v.mw5_rated);
+        const ts = parseFloat(v.mw5_trip);
+        if (isNaN(rs) || isNaN(ts)) return { state: 'pending', text: 'Enter speeds.' };
+        const max = rs * 1.4;
+        const pass = ts <= max;
+        return {
+          state: pass ? 'pass' : 'fail',
+          label: pass ? 'COMPLIANT' : 'EXCEEDS 140%',
+          value: ts.toFixed(0) + ' fpm · max ' + max.toFixed(0) + ' fpm',
+          detail: '140% of rated max.'
+        };
+      }
+    }
+  },
+
+  { id: 'MW5.4', title: 'Chain / Drive — Detailed Inspection', ref: 'A17.1 §6.2.3',
+    desc: 'Pallet chain or belt drive inspection: elongation, wear, tensioning, sprocket / pulley condition.' }
+]
+
+};
+
+/* ============================================================
+   FAIL CRITERIA — what would cause the item to fail inspection.
+   Keyed by test ID. Displayed under description in expanded view.
+   ============================================================ */
+
+const FAIL_CRITERIA = {
+
+  // HYDRAULIC CAT 1
+  'H1.1': [
+    'Jerky or non-uniform acceleration / deceleration',
+    'Excessive noise from pump, valves, or muffler under load',
+    'Fails to level within ±3/8 in (10 mm) at landings',
+    'Vibration in car or guide rails',
+    'Drifting away from landing during stop'
+  ],
+  'H1.2': [
+    'Fails to slow before reaching terminal landing',
+    'Stops past sill / overshoots landing',
+    'Slowdown not independent from final terminal device',
+    'Slowdown speed too high — harsh stop at terminal'
+  ],
+  'H1.3': [
+    'Fails to remove power when activated',
+    'Activates simultaneously with normal terminal (not independent)',
+    'Cable, switch, or mounting loose / damaged / misadjusted'
+  ],
+  'H1.6': [
+    'Fails to detect low oil condition on test',
+    'Does not lower car to bottom landing',
+    'Does not remove power from automatic operation after detection',
+    'Sensor or switch contaminated, damaged, or bypassed'
+  ],
+  'H1.7': [
+    'Does not open circuit at proper pressure',
+    'Contacts welded closed or stuck open',
+    'Setting deviates significantly from manufacturer spec',
+    'Tubing or fitting leakage at switch'
+  ],
+  'H1.8': [
+    'Device does not trip with simulated slack rope',
+    'Mechanical linkage seized or binding',
+    'Electrical contact welded or non-functional',
+    'Rope guards or retention damaged'
+  ],
+  'H1.9': [
+    'Stop ring missing, damaged, or loose',
+    'Plunger shows impact damage at stop ring',
+    'Travel limit fails to prevent plunger from exiting cylinder',
+    'Stop ring fasteners loose or corroded'
+  ],
+  'H1.10': [
+    'Reopening device fails to detect obstruction',
+    'Doors close on test object without reopening',
+    'Power doors operate erratically or fail to close',
+    'Nudging timer out of manufacturer range',
+    'Audible signal during nudging absent where required'
+  ],
+  'H1.11': [
+    'Car operates with hoistway door unlocked',
+    'Car operates with car gate open',
+    'Interlock fails to lock before motor circuit completes',
+    'Restricted door operation defeats interlock'
+  ],
+  'H1.13': [
+    'Car operates with one phase removed',
+    'Car operates with reversed phases',
+    'Protection does not reset after fault cleared'
+  ],
+  'H1.14': [
+    'Fails to recall to designated landing',
+    'Doors do not open at recall landing',
+    'Visual signal (firefighters\u2019 hat) absent or non-functional',
+    'Lobby key does not override smoke detector',
+    'Smoke detector activation does not trigger recall'
+  ],
+  'H1.15': [
+    'Doors close without continuous pressure on button',
+    '"Call Cancel" function inoperative',
+    'Key removal during run produces unsafe behavior',
+    'Door hold-open not maintained without continuous input'
+  ],
+  'H1.16': [
+    'Emergency light fails to illuminate on power loss',
+    'Light duration less than 4 hours on standalone test',
+    'Alarm bell inaudible at corridor side of door',
+    'Battery weak, leaking, swollen, or beyond service life'
+  ],
+  'H1.17': [
+    'No response from monitoring center within required time',
+    'Audio quality unintelligible',
+    'No visual / audible confirmation that call was received',
+    'Cannot establish two-way communication',
+    'Hands-free operation not available where required'
+  ],
+  'H1.18': [
+    'Switch does not interrupt power',
+    'Auto-resets without manual intervention',
+    'Not properly labeled "STOP — RUN"',
+    'Physically damaged, missing, or inaccessible'
+  ],
+  'H1.19': [
+    'Transfer to standby fails to complete',
+    'Selected car does not return to designated floor',
+    'Door operation fails on standby',
+    'System does not match design intent / sequence'
+  ],
+  'H1.20': [
+    'Does not activate on simulated power failure',
+    'Does not lower car to nearest landing',
+    'Doors do not open after arriving at landing',
+    'Battery weak or runtime insufficient'
+  ],
+
+  // HYDRAULIC CAT 5
+  'H5.4': [
+    'Valve fails to close on simulated rupture / overspeed',
+    'Does not stop car at proper speed condition',
+    'Reset procedure non-functional',
+    'Valve setting tag missing or incorrect',
+    'Visible oil leakage at valve body'
+  ],
+  'H5.5': [
+    'Fails to grip plunger at trip speed',
+    'Electrical contact does not open',
+    'Jaws show damage or excessive wear',
+    'Reset procedure non-functional',
+    'Plunger surface marred by repeated trips'
+  ],
+  'H5.6': [
+    'Permanent platform deformation after test load',
+    'Supporting structure shows distress (cracks, deflection)',
+    'Safeties (if equipped) fail to hold combined load',
+    'Test documentation not maintained on site'
+  ],
+  'H5.7': [
+    'Safety fails to engage at trip speed',
+    'Stopping distance outside code range',
+    'Asymmetric engagement (one side engages first)',
+    'Reset / restoration to service non-functional',
+    'Jaw damage from prior trip not addressed'
+  ],
+  'H5.9': [
+    'Does not fully compress on impact',
+    'Does not return to extended within 90 sec',
+    'Visible oil leakage during or after test',
+    'Pitted or damaged plunger',
+    'Oil level below mark'
+  ],
+
+  // TRACTION CAT 1
+  'T1.1': [
+    'Jerky or non-uniform acceleration / deceleration',
+    'Excessive noise from machine, brake, or ropes',
+    'Fails to level within ±3/8 in (10 mm)',
+    'Vibration in car or guide rails',
+    'Rope slap or chatter audible from inside car'
+  ],
+  'T1.2': [
+    'Fails to slow before reaching terminal landing',
+    'Stops past sill / overshoots landing',
+    'Slowdown not independent from final terminal device'
+  ],
+  'T1.3': [
+    'Fails to remove power before buffer engagement',
+    'Activates simultaneously with normal terminal (not independent)',
+    'Limit cam, switch, or mounting damaged / misadjusted'
+  ],
+  'T1.4': [
+    'Jaws show wear, corrosion, or impact damage',
+    'Linkage binding, seized, or misaligned',
+    'Governor rope drum misaligned or worn',
+    'Manual trip fails to engage safety positively',
+    'Safety setting not per data plate'
+  ],
+  'T1.6': [
+    'Excessive coast or glide on stop',
+    'Brake does not hold under normal loaded conditions',
+    'Brake makes contact at floor (not before)',
+    'Drum or disc shows scoring or oil contamination',
+    'Brake lining worn beyond manufacturer limit',
+    'Brake monitoring (where equipped) indicates fault'
+  ],
+  'T1.7': [
+    'Operates without constant pressure on button',
+    'Inspection speed exceeds 150 fpm',
+    'Automatic operation not disabled',
+    'Stop switches non-functional from inspection station',
+    'Direction reversal not blocked',
+    'Up / Down indication incorrect'
+  ],
+  'T1.8': [
+    'Operates without key',
+    'Allows full normal travel (not limited to access zone)',
+    'Key removable when switch is in active position',
+    'Switch missing, damaged, or mounted incorrectly'
+  ],
+  'T1.10': [
+    'Hoistway door opens from corridor more than 3 in with car off landing',
+    'Interlock locks door less than 3/4 in before fully closed',
+    'Lock defeatable from corridor side without tool',
+    'Switch contacts welded, binding, or burned',
+    'Door restrictor (where required) inoperative'
+  ],
+  'T1.11': [
+    'Car runs with gate open',
+    'Contact misadjusted (operates with gate partially open)',
+    'Bypass jumper present on gate contact',
+    'Gate switch arm bent or misaligned'
+  ],
+  'T1.12': [
+    'Car operates with one phase removed',
+    'Car operates with reversed phases',
+    'Protection does not reset after fault cleared'
+  ],
+  'T1.13': [
+    'Transfer to standby fails to complete',
+    'Selected car does not return to designated floor',
+    'Door operation fails on standby',
+    'System does not match design intent'
+  ],
+  'T1.14': [
+    'Fails to recall to designated landing',
+    'Doors do not open at recall landing',
+    'Visual signal absent or non-functional',
+    'Lobby key does not override smoke detector',
+    'Smoke detector activation does not trigger recall'
+  ],
+  'T1.15': [
+    'Doors close without continuous pressure on button',
+    '"Call Cancel" function inoperative',
+    'Key removal during run produces unsafe behavior',
+    'Door hold-open not maintained without continuous input'
+  ],
+  'T1.16': [
+    'No response from monitoring center within required time',
+    'Audio quality unintelligible',
+    'No visual confirmation that call was received',
+    'Cannot establish two-way communication'
+  ],
+  'T1.17': [
+    'Emergency light fails to illuminate on power loss',
+    'Light duration less than 4 hours on test',
+    'Alarm bell inaudible at corridor side of door',
+    'Battery weak, leaking, or beyond service life'
+  ],
+  'T1.18': [
+    'Switch does not interrupt power',
+    'Auto-resets without manual intervention',
+    'Not properly labeled',
+    'Damaged, missing, or inaccessible'
+  ],
+  'T1.19': [
+    'Controller self-test indicator shows UCM fault',
+    'Fault log shows recurring UCM-related errors',
+    'Visual damage to UCM gripper, brake, or linkage',
+    'Sensors or monitoring contacts loose or corroded'
+  ],
+  'T1.20': [
+    'Controller self-test indicator shows ACOP fault',
+    'Visual damage to ACOP gripper, brake, or device',
+    'Fault log shows ACOP-related errors',
+    'Reset or setup indicator absent'
+  ],
+  'T1.21': [
+    'Seismic switch fails to operate on test activation',
+    'Counterweight derailment detector misadjusted',
+    'Recovery procedure not posted at controller',
+    'Switch reset requires special tool not on site'
+  ],
+
+  // TRACTION CAT 5
+  'T5.2': [
+    'Fails to engage at trip speed',
+    'Asymmetric or partial engagement',
+    'Stopping distance outside code range',
+    'Reset / restoration non-functional'
+  ],
+  'T5.8': [
+    'Selected car does not operate at rated load on standby',
+    'Door operation degraded on standby',
+    'Transfer time exceeds design spec',
+    'System does not match design intent'
+  ],
+  'T5.9': [
+    'Broken wires per strand exceed A17.6 / manufacturer limits',
+    'Crown wear exceeds 1/3 original wire diameter',
+    'Excessive corrosion, pitting, or rust',
+    'Diameter reduction exceeds tolerance for rope size',
+    'Tension imbalance greater than 10% between ropes',
+    'Significant lubrication loss',
+    'Damaged or kinked strand visible'
+  ],
+  'T5.10': [
+    'Permanent stretch beyond manufacturer limit',
+    'Visible damage to belt coating or rope',
+    'Documentation of test absent',
+    'Manufacturer monitoring system shows fault'
+  ],
+
+  // MRL CAT 1
+  'MRL1.1': [
+    'Station inaccessible safely without entering hoistway under power',
+    'Stop switches non-functional from inspection station',
+    'Speed exceeds 150 fpm on inspection',
+    'Constant-pressure operation not enforced',
+    'Station unmarked or key missing',
+    'Up / Down direction labeling incorrect'
+  ],
+  'MRL1.2': [
+    'Switch fails to disable normal operation',
+    'Defeatable without key or tool',
+    'Switch missing or damaged',
+    'Does not prevent automatic operation when machinery accessed',
+    'Switch position monitoring inoperative'
+  ],
+  'MRL1.3': [
+    'Switch does not interrupt power when activated',
+    'Auto-resets without manual intervention',
+    'Missing at required locations (deep pits / multiple ladders)',
+    'Not properly labeled',
+    'Pit-floor stop switch inaccessible from ladder'
+  ],
+  'MRL1.4': [
+    'Self-test indicates fault but elevator continues to operate',
+    'Monitoring fails to detect stuck-open brake',
+    'Monitoring fails to detect stuck-closed brake',
+    'Fault log absent, corrupted, or non-functional',
+    'Single brake failure not detected per code'
+  ],
+  'MRL1.5': [
+    'Release mechanism seized, binding, or sticky',
+    'Speed limiter (governor / centrifugal device) inoperative',
+    'Posted procedure absent or unreadable',
+    'Required tool missing or stored inaccessibly',
+    'Release direction or rate uncontrolled'
+  ],
+  'MRL1.6': [
+    'Procedure not posted in machinery space or at controller',
+    'Personnel on site unfamiliar with procedure',
+    'Required tools missing, broken, or wrong specification',
+    'Procedure references different equipment or model',
+    'Procedure date older than current code edition'
+  ],
+  'MRL1.7': [
+    'Fails to activate on simulated power loss',
+    'Does not move to nearest landing',
+    'Battery weak or runtime below design',
+    'Doors do not open after arriving',
+    'Battery cells leaking, swollen, or past replacement date'
+  ],
+  'MRL1.8': [
+    'Refuge space marking missing, faded, or unclear',
+    'Mechanically-deployed device fails to activate',
+    'Position monitoring of deployed device inoperative',
+    'Compensating device shows damage or wear',
+    'Required clearance dimensions not maintained'
+  ],
+  'MRL1.9': [
+    'Guard rails missing or damaged where required',
+    'Top-of-car stop switch non-functional',
+    'Operating device does not transition to inspection',
+    'Working surface inadequate or unsafe',
+    'No means to secure tools / equipment on top'
+  ],
+  'MRL1.10': [
+    'Runby less than design specification',
+    'Compensating refuge device inoperative',
+    'Counterweight buffer condition unacceptable',
+    'Documentation of design runby absent'
+  ],
+  'MRL1.11': [
+    'Lighting cannot be turned on from outside hoistway',
+    'Light switch inaccessible at hoistway access point',
+    'Lighting level inadequate (verify per code)',
+    'Switch defective or mismarked'
+  ],
+  'MRL1.12': [
+    'Visible damage to gripper jaws or rope contact surface',
+    'Electrical contact non-functional or damaged',
+    'Self-test fault present at controller',
+    'Mounting hardware loose or corroded',
+    'Rope shows pre-existing wear or marking from prior trips'
+  ],
+
+  // MRL CAT 5
+  'MRL5.2': [
+    'Controller fails to detect simulated brake fault',
+    'Allows operation with one brake disabled',
+    'Does not transition to safe mode',
+    'Alarm or notification absent',
+    'Recovery requires bypass of safety circuit'
+  ],
+  'MRL5.3': [
+    'Does not engage under load test conditions',
+    'Stop outside ACOP retardation or UCM zone limits',
+    'Damage to rope or sheave after test',
+    'Electrical contact does not open during engagement',
+    'Reset procedure non-functional'
+  ],
+  'MRL5.4': [
+    'Procedure takes excessive time (typically > 15–20 min for trapped passenger)',
+    'Required tools missing or wrong specification',
+    'Brake release ineffective or uncontrolled',
+    'Door unlock at landing non-functional',
+    'Personnel unable to execute without supervisor or manufacturer help'
+  ],
+  'MRL5.5': [
+    'Unaddressed recurring safety-relevant faults in log',
+    'Self-test functions non-operational',
+    'Log inaccessible, corrupted, or recently cleared',
+    'No record of prior Cat 1 / Cat 5 inspections in controller'
+  ],
+  'MRL5.6': [
+    'Refuge device fails to deploy fully',
+    'Position monitoring inoperative',
+    'Controller allows normal operation when device deployed',
+    'Device shows damage, wear, or corrosion',
+    'Manual override exists without monitoring'
+  ],
+
+  // ESCALATOR CAT 1
+  'E1.1': [
+    'Cracked, missing, or broken step',
+    'Worn cleats below manufacturer minimum depth',
+    'Missing or excessively worn yellow demarcation lines',
+    'Bent or damaged risers',
+    'Excessive step-to-step gap (typically > 6 mm / 1/4 in)',
+    'Damaged step rollers (flat-spotted, missing, or frozen)',
+    'Step chain visibly worn, kinked, or with broken / loose links'
+  ],
+  'E1.6': [
+    'Stop button does not activate stop',
+    'Brake fails to set after button press',
+    'Auto-resets without manual intervention',
+    'Button cover missing, broken, or unsecured',
+    '"EMERGENCY STOP" signage absent or illegible'
+  ],
+  'E1.7': [
+    'Does not detect simulated level fault',
+    'Stops too late (defective step enters comb plate)',
+    'Sensor misadjusted or damaged',
+    'Reset / restoration non-functional'
+  ],
+  'E1.8': [
+    'Does not detect simulated step lift',
+    'Sensor misaligned',
+    'Reset non-functional',
+    'Mounting damaged or loose'
+  ],
+  'E1.9': [
+    'Does not detect missing step',
+    'Detection occurs after gap reaches comb plate',
+    'Sensor range insufficient',
+    'Photoelectric or mechanical element damaged or dirty'
+  ],
+  'E1.10': [
+    'Tension spring weak, broken, or missing',
+    'Limit switch misadjusted',
+    'Does not remove power on elongation',
+    'Brake does not apply after detection',
+    'Tension carriage travel out of spec'
+  ],
+  'E1.11': [
+    'Sensor does not detect drive chain failure',
+    'Slack indicator misadjusted',
+    'Does not remove power on simulated fault',
+    'Drive chain already shows excessive elongation'
+  ],
+  'E1.12': [
+    'Does not detect simulated unintended reversal',
+    'Sensor damaged or misaligned',
+    'Stop time excessive after detection',
+    'Reset non-functional'
+  ],
+  'E1.13': [
+    'Force to activate outside manufacturer spec (too loose or too tight)',
+    'One direction (horizontal or vertical) inoperative',
+    'One end (upper or lower) inoperative',
+    'Sensor misadjusted',
+    'Mounting damaged'
+  ],
+  'E1.14': [
+    'Inlet guard missing, broken, or improperly secured',
+    'Sensor does not activate with test object',
+    'Does not apply brake after detection',
+    'Inlet shows excessive wear or passenger entry damage'
+  ],
+  'E1.15': [
+    'Does not detect speed deviation between handrail and step',
+    'Sensor misaligned or damaged',
+    'Threshold setting outside manufacturer spec',
+    'Does not detect complete handrail stop'
+  ],
+  'E1.16': [
+    'Does not activate at proper applied force',
+    'Coverage area incomplete (gaps in detection along run)',
+    'One side or one half-length inoperative',
+    'Reset non-functional',
+    'Sensor strip damaged or compressed'
+  ],
+  'E1.18': [
+    'Gaps or breaks in deflector continuity',
+    'Mounting loose or fasteners missing',
+    'Ends not properly tapered or turned away from step',
+    'Damaged, deformed, or missing sections',
+    'Worn beyond manufacturer replacement spec'
+  ],
+  'E1.19': [
+    'Stop distance outside Cat 1 table range',
+    'Brake applies unevenly (one side first)',
+    'Excessive coast after brake set',
+    'Brake lining shows scoring or oil contamination'
+  ],
+  'E1.20': [
+    'Combplate lighting inadequate or non-functional',
+    'Run / step lighting deficient',
+    'Machinery space lighting absent or inoperative',
+    'Lamp failures not annunciated to maintenance'
+  ],
+  'E1.21': [
+    'Emergency stop cover missing or damaged',
+    'Audible alarm absent on activation (where required)',
+    'Signage missing, illegible, or wrong language',
+    'Cover defeats activation force when in place'
+  ],
+  'E1.22': [
+    'Caution signs missing at one or both ends',
+    'Damaged, faded, or illegible signs',
+    'Wording or pictograms do not match current code',
+    'Signs improperly located or positioned'
+  ],
+  'E1.23': [
+    'Maximum recorded index exceeds applicable limit (0.15 / 0.25 / 0.40)',
+    'Skirt panel surface contaminated with field-applied lubricant prior to test',
+    'Test specimen not GE Lexan 100 series or equivalent polycarbonate',
+    'Applied load deviates from 25 lbf by more than ±2.5 lbf',
+    'Damaged or scored skirt panel observed during measurement run',
+    'Test results not documented in maintenance records',
+    'Skirt deflector device (when required for 0.25 limit) does not meet §6.1.3.3.10'
+  ],
+
+  // ESCALATOR CAT 5
+  'E5.1': [
+    'Stop distance outside loaded test range',
+    'Brake applies asymmetrically under load',
+    'Brake lining worn beyond replacement spec',
+    'Stop distance shows degradation vs prior test'
+  ],
+  'E5.2': [
+    'Auxiliary brake does not engage independently',
+    'Stop distance outside loaded range',
+    'Does not engage when main brake is simulated failed',
+    'Visual damage to brake mechanism'
+  ],
+  'E5.4': [
+    'Chain elongation beyond manufacturer replacement limit',
+    'Pin wear excessive (pin diameter reduction)',
+    'Tension carriage travel inadequate to maintain tension',
+    'Sprocket teeth show wear, chipping, or hooking',
+    'Lubrication absent or contaminated'
+  ],
+  'E5.5': [
+    'Pull test documentation absent',
+    'Manufacturer interval since last test exceeded',
+    'Chain shows elongation requiring replacement per spec',
+    'Test not conducted per AHJ requirement'
+  ],
+
+  // MOVING WALK CAT 1
+  'MW1.1': [
+    'Cracked or missing pallets / belt sections',
+    'Demarcation lines missing or worn',
+    'Edge clearance to skirt or wall exceeds spec',
+    'Wear beyond manufacturer replacement spec',
+    'Belt tracking off-center (belt type)',
+    'Damaged tread surface affecting passenger safety'
+  ],
+  'MW1.5': [
+    'Stop switch does not activate stop',
+    'Brake fails to set after switch press',
+    'Auto-resets without manual intervention',
+    'Cover missing, broken, or unsecured',
+    'Signage absent or illegible'
+  ],
+  'MW1.6': [
+    'Does not detect missing pallet (pallet type)',
+    'Belt position / skew monitor inoperative (belt type)',
+    'Position sensor misaligned or damaged'
+  ],
+  'MW1.7': [
+    'Sensor does not detect chain failure or belt drive issue',
+    'Slack indicator misadjusted',
+    'Does not remove power on simulated fault'
+  ],
+  'MW1.8': [
+    'Force to activate outside manufacturer spec',
+    'One direction inoperative',
+    'One end inoperative',
+    'Sensor or mounting damaged'
+  ],
+  'MW1.9': [
+    'Does not detect reversal (especially on inclined units)',
+    'Sensor misaligned or damaged',
+    'Stop time excessive'
+  ],
+  'MW1.10': [
+    'Inlet guard missing or damaged',
+    'Sensor does not activate with test object',
+    'Does not apply brake after activation'
+  ],
+  'MW1.11': [
+    'Does not detect handrail speed deviation',
+    'Does not detect complete handrail stop',
+    'Sensor misaligned'
+  ],
+  'MW1.12': [
+    'Intermeshing depth between pallet/belt and comb teeth insufficient',
+    'Lateral misalignment between pallet and comb',
+    'Excessive gap allowing entrapment',
+    'Comb teeth damaged, missing, or worn'
+  ],
+  'MW1.13': [
+    'Stop distance outside code range',
+    'Brake applies unevenly',
+    'Excessive coast after brake set'
+  ],
+
+  // MOVING WALK CAT 5
+  'MW5.1': [
+    'Stop distance outside loaded range',
+    'Brake applies asymmetrically under load',
+    'Brake lining worn beyond replacement spec'
+  ],
+  'MW5.2': [
+    'Auxiliary brake does not engage independently',
+    'Stop distance outside spec',
+    'Visual damage to mechanism'
+  ],
+  'MW5.4': [
+    'Chain or belt elongation beyond replacement limit',
+    'Pin or roller wear excessive',
+    'Tensioning device travel inadequate',
+    'Pulley or sprocket wear beyond spec',
+    'Lubrication absent or contaminated'
+  ]
+};
+
+/* ============================================================
+   CITATIONS — Florida violation numbers + A17.1 sections by edition
+   FL violations sourced from DBPR violation reference (high confidence)
+   A17.1-2019 sections verified against PDF where marked verified
+   A17.1-2013 sections from training data — flagged for re-verification
+   ============================================================ */
+
+const CITATIONS = {
+  // HYDRAULIC CAT 1
+  'H1.1': { fl: '119', fl_label: 'Car ride',
+    s2013: '§3.26', s2019: '§3.26', notes: 'Ride quality issue — cite the most relevant operating control / valve section.' },
+  'H1.2': { fl_multi: [{v:'305', l:'Normal terminal stopping devices (top of car)'},{v:'504', l:'Normal terminal stopping devices (pit)'}],
+    s2013: '§3.25.2', s2019: '§3.25.2', verified: ['2013','2019'],
+    a173: '§4.6 / §3.9.1' },
+  'H1.3': { fl_multi: [{v:'306', l:'Final & emergency terminal stopping devices (top of car)'},{v:'503', l:'Final & emergency terminal stopping devices (pit)'}],
+    s2013: '§3.25.3', s2019: '§3.25.3', verified: ['2013','2019'],
+    a173: '§4.6 / §3.9.2' },
+  'H1.4': { fl: '307', fl_label: 'Car leveling and anti-creep devices',
+    s2013: '§3.26.3', s2019: '§3.26.3', verified: ['2013','2019'],
+    a173: '§4.7.3',
+    notes: '⚠️ A17.3 tolerance differs from A17.1. A17.3 §4.7.3(a): "shall maintain car within 3 in. (76 mm) of landing." A17.1 §3.26.3: 1 in. (25 mm). When inspecting an older NV unit under A17.3, use the 3-in. limit — not 1 in.' },
+  'H1.5': { fl: '231', fl_label: 'Relief valves',
+    s2013: '§3.19.4.2', s2019: '§3.19.4.2', verified: ['2013','2019'],
+    a173: '§4.4.1',
+    notes: 'Verified §3.19.4.2 "Pump Relief Valve" in A17.1-2010 and A17.1-2019 PDFs. A17.3 §4.4.1(a)(2) — same 50% above working pressure rule (i.e., 150% max).' },
+  'H1.6': { fl: '239', fl_label: 'Low oil protection',
+    s2013: '§3.26.9', s2019: '§3.26.9', verified: ['2019'],
+    notes: 'Not explicitly addressed in A17.3-2020 — field verify under §4.7 if cited on a NV inspection of older unit.' },
+  'H1.7': { fl: '237', fl_label: 'Pressure switch',
+    s2013: '§3.26.7', s2019: '§3.26.7', verified: ['2019'] },
+  'H1.8': { fl: '331', fl_label: 'Slack rope device (Roped-Hydraulic)',
+    s2013: '§3.18.4', s2019: '§3.18.4',
+    a173: '§4.9 / §3.8.2(a)' },
+  'H1.9': { fl_multi: [{v:'236', l:'Hydraulic cylinders'},{v:'511', l:'Plungers and Cylinders (pit)'}],
+    s2013: '§3.18.2', s2019: '§3.18.2',
+    a173: '§4.3',
+    notes: 'Note: §3.18 in 2013/2019 covers Plungers, Cylinders, and Hydraulic Jacks. A17.3 §4.3 = Driving Machines (hydraulic).' },
+  'H1.10': { fl_multi: [{v:'107', l:'Car door and gate'},{v:'109', l:'Power closing of doors and gates'},{v:'110', l:'Power opening of doors and gates'}],
+    s2013: '§2.13', s2019: '§2.13', verified: ['2013','2019'],
+    a173: '§2.8',
+    notes: 'A17.1 §2.13 "Power Operation of Hoistway Doors and Car Doors" verified in 2013. A17.3 §2.8 covers the equivalent.' },
+  'H1.11': { fl_multi: [{v:'107', l:'Car door and gate'},{v:'404', l:'Hoistway door locking devices'}],
+    s2013: '§2.12, §2.14.5', s2019: '§2.12, §2.14.5', verified: ['2013','2019'],
+    a173: '§2.7',
+    notes: 'A17.1 §2.12 verified in 2013 as "Hoistway Door Locking Devices and Electric Contacts." A17.3 §2.7 = "Hoistway-Door Locking Devices, Parking Devices, and Access."' },
+  'H1.12': { fl: '108', fl_label: 'Door closing force & speed',
+    s2013: '§2.13.4', s2019: '§2.13.4',
+    a173: '§2.8',
+    notes: 'Field verify specific subsection — typically §2.13.4.2.2 for the 30 lbf force limit. A17.3 does not have the same explicit 30 lbf limit; door operation requirements are in §2.8.' },
+  'H1.13': { fl: '212', fl_label: 'Controller wiring, fuses, grounding, etc.',
+    s2013: '§3.26.4', s2019: '§3.26.4',
+    a173: '§3.10.4' },
+  'H1.14': { fl: '608', fl_label: "Firefighters' Service — A17.1-2013 & A17.1-2016",
+    fl_byyear: true,
+    s2013: '§2.27.3', s2019: '§2.27.3', verified: ['2013','2019'],
+    a173: '§3.11.3',
+    notes: 'FL violation number depends on installation code era: 601 (pre-1980), 602 (1981-1983), 603 (1984-1988), 604 (1989-2000), 605 (2000), 606 (2005), 607 (2009), 608 (2013/2016/2019). A17.3 §3.11.3: "Elevators shall conform to ASME/ANSI A17.1-1987 Rules 211.3-211.8 (see Nonmandatory Appendix C) unless required to comply with a later edition." For NV existing installations, this is the baseline.' },
+  'H1.15': { fl: '608', fl_label: "Firefighters' Service — A17.1-2013 & A17.1-2016",
+    fl_byyear: true,
+    s2013: '§2.27.3.3', s2019: '§2.27.3.3', verified: ['2013','2019'],
+    a173: '§3.11.3' },
+  'H1.16': { fl_multi: [{v:'105', l:'Car lighting and receptacles (protection)'},{v:'106', l:'Car emergency signal/communication device'}],
+    s2013: '§2.14.7, §2.27.1', s2019: '§2.14.7, §2.27.1',
+    a173: '§3.4.5 / §3.11.1' },
+  'H1.17': { fl: '106', fl_label: 'Car emergency signal/communication device',
+    s2013: '§2.27.1.1', s2019: '§2.27.1.1', verified: ['2013','2019'],
+    a173: '§3.11.1',
+    notes: 'A17.1 §2.27.1.1 verified in 2013 and 2019. In 2013, sub-paragraphs .4(b) and .6 were revised. In 2019, §2.27.1.1 was revised in its entirety. A17.3 §3.11.1(a) covers pre-2000 installations (audible signaling + two-way comm); §3.11.1(b) defers to A17.1 §2.27 for 2002+ installations.' },
+  'H1.18': { fl_multi: [{v:'102', l:'Stop switches (in car)'},{v:'301', l:'Top-of-car stop switch'},{v:'501', l:'Pit access, lighting, stop switch, & condition'}],
+    s2013: '§2.26.2', s2019: '§2.26.2', verified: ['2013'],
+    a173: '§3.10.4(e), §4.7.4',
+    notes: 'A17.3 §3.10.4(e) = Stop Switch on Top of Car. §4.7.4 covers stop switches in pit/in-car for hydraulic.' },
+  'H1.19': { fl_multi: [{v:'117', l:'Standby power operation'},{v:'412', l:'Standby power selection switch'}],
+    s2013: '§2.27.2', s2019: '§2.27.2', verified: ['2013','2019'],
+    a173: '§3.11.2' },
+  'H1.20': { fl: '244', fl_label: 'Auxiliary power lowering operation',
+    s2013: '§3.26.10', s2019: '§3.26.10',
+    notes: 'Not explicitly addressed in A17.3-2020 — newer feature.' },
+
+  // HYDRAULIC CAT 5
+  'H5.1': { fl_multi: [{v:'231', l:'Relief valves'},{v:'260', l:'Test records'}],
+    s2013: '§3.19.4.2, §8.11.4', s2019: '§3.19.4.2, §8.11.4', verified: ['2013','2019'],
+    a173: '§4.4.1' },
+  'H5.2': { fl: '307', fl_label: 'Car leveling and anti-creep devices',
+    s2013: '§3.26.3', s2019: '§3.26.3', verified: ['2013','2019'],
+    a173: '§4.7.3' },
+  'H5.3': { fl_multi: [{v:'230', l:'Hydraulic power unit'},{v:'260', l:'Test records'}],
+    s2013: '§8.11.4', s2019: '§8.11.4' },
+  'H5.4': { fl: '515', fl_label: 'Overspeed valve',
+    s2013: '§3.19.4.7', s2019: '§3.19.4.7', notes: 'Field verify specific subsection — varies by valve type.' },
+  'H5.5': { fl: '517', fl_label: 'Plunger Gripper',
+    s2013: '§3.17.3', s2019: '§3.17.3', verified: ['2013'] },
+  'H5.6': { fl: '116', fl_label: 'Rated loads, platform area, and data plate',
+    s2013: '§2.16.8', s2019: '§2.16.8',
+    a173: '§3.7',
+    notes: 'Class C2 freight loading. A17.3 §3.7 = Capacity and Loading.' },
+  'H5.7': { fl_multi: [{v:'229', l:'Car and counterweight safeties'},{v:'508', l:'Car & ctwt safeties and guiding members'}],
+    s2013: '§3.17', s2019: '§3.17', verified: ['2013'],
+    a173: '§3.5' },
+  'H5.8': { fl: '213', fl_label: 'Governor, overspeed switch, and seal',
+    s2013: '§3.18.3', s2019: '§3.18.3',
+    a173: '§3.6' },
+  'H5.9': { fl: '512', fl_label: 'Car buffer',
+    s2013: '§3.22', s2019: '§3.22', verified: ['2013'],
+    a173: '§3.1' },
+
+  // TRACTION CAT 1
+  'T1.1': { fl: '119', fl_label: 'Car ride',
+    s2013: '§2.26', s2019: '§2.26' },
+  'T1.2': { fl_multi: [{v:'228', l:'Terminal stopping devices'},{v:'305', l:'Normal terminal stopping devices (top)'},{v:'504', l:'Normal terminal (pit)'}],
+    s2013: '§2.25.2', s2019: '§2.25.2', verified: ['2013','2019'],
+    a173: '§3.9.1' },
+  'T1.3': { fl_multi: [{v:'228', l:'Terminal stopping devices'},{v:'306', l:'Final & emergency terminal (top)'},{v:'503', l:'Final & emergency terminal (pit)'}],
+    s2013: '§2.25.3', s2019: '§2.25.3', verified: ['2013','2019'],
+    a173: '§3.9.2' },
+  'T1.4': { fl_multi: [{v:'229', l:'Car and counterweight safeties'},{v:'508', l:'Car & ctwt safeties and guiding members'}],
+    s2013: '§2.17', s2019: '§2.17', verified: ['2013','2019'],
+    a173: '§3.5' },
+  'T1.5': { fl: '213', fl_label: 'Governor, overspeed switch, and seal',
+    s2013: '§2.18', s2019: '§2.18', verified: ['2013'],
+    a173: '§3.6, §3.10.4(g)' },
+  'T1.6': { fl: '217', fl_label: 'Machine brake',
+    s2013: '§2.24.8', s2019: '§2.24.8', verified: ['2013','2019'],
+    a173: '§3.8' },
+  'T1.7': { fl_multi: [{v:'245', l:'Inspection operation & Inspection Hierarchy'},{v:'303', l:'Top-of-car operating device'}],
+    s2013: '§2.26.1.4', s2019: '§2.26.1.4', verified: ['2013'],
+    a173: '§3.10.3' },
+  'T1.8': { fl: '405', fl_label: 'Access to hoistway',
+    s2013: '§2.12.7', s2019: '§2.12.7',
+    a173: '§2.7' },
+  'T1.9': { fl_multi: [{v:'101', l:'Door reopening device'},{v:'108', l:'Door closing force & speed'},{v:'109', l:'Power closing of doors'}],
+    s2013: '§2.13', s2019: '§2.13', verified: ['2013','2019'],
+    a173: '§2.8' },
+  'T1.10': { fl: '404', fl_label: 'Hoistway door locking devices',
+    s2013: '§2.12', s2019: '§2.12', verified: ['2013','2019'],
+    a173: '§2.7' },
+  'T1.11': { fl: '107', fl_label: 'Car door and gate',
+    s2013: '§2.14.5', s2019: '§2.14.5',
+    a173: '§3.10.4 / §3.4' },
+  'T1.12': { fl: '212', fl_label: 'Controller wiring, fuses, grounding, etc.',
+    s2013: '§2.26.4', s2019: '§2.26.4',
+    a173: '§3.10.4' },
+  'T1.13': { fl_multi: [{v:'117', l:'Standby power operation'},{v:'412', l:'Standby power selection switch'}],
+    s2013: '§2.27.2', s2019: '§2.27.2', verified: ['2013','2019'],
+    a173: '§3.11.2' },
+  'T1.14': { fl: '608', fl_label: "Firefighters' Service — A17.1-2013 & A17.1-2016",
+    fl_byyear: true,
+    s2013: '§2.27.3', s2019: '§2.27.3', verified: ['2013','2019'],
+    a173: '§3.11.3' },
+  'T1.15': { fl: '608', fl_label: "Firefighters' Service — A17.1-2013 & A17.1-2016",
+    fl_byyear: true,
+    s2013: '§2.27.3.3', s2019: '§2.27.3.3', verified: ['2013','2019'],
+    a173: '§3.11.3' },
+  'T1.16': { fl: '106', fl_label: 'Car emergency signal/communication device',
+    s2013: '§2.27.1.1', s2019: '§2.27.1.1', verified: ['2013','2019'],
+    a173: '§3.11.1' },
+  'T1.17': { fl_multi: [{v:'105', l:'Car lighting and receptacles (protection)'},{v:'106', l:'Car emergency signal/communication device'}],
+    s2013: '§2.14.7, §2.27.1', s2019: '§2.14.7, §2.27.1',
+    a173: '§3.4.5 / §3.11.1' },
+  'T1.18': { fl_multi: [{v:'102', l:'Stop switches (in car)'},{v:'301', l:'Top-of-car stop switch'},{v:'501', l:'Pit access, lighting, stop switch, & condition'}],
+    s2013: '§2.26.2', s2019: '§2.26.2', verified: ['2013'],
+    a173: '§3.10.4(e)' },
+  'T1.19': { fl: '243', fl_label: 'Emergency brake, ACOP & UCM protections',
+    s2013: '§2.19.2', s2019: '§2.19.2', verified: ['2013','2019'],
+    a173: '§3.13.2',
+    notes: 'A17.3 §3.13.2 verified in PDF — covers UCM detection and emergency brake actuation requirements.' },
+  'T1.20': { fl: '243', fl_label: 'Emergency brake, ACOP & UCM protections',
+    s2013: '§2.19.1', s2019: '§2.19.1', verified: ['2013','2019'],
+    a173: '§3.13.1',
+    notes: 'A17.3 §3.13.1 verified in PDF — ACOP detection at speed ≤10% above governor trip speed.' },
+  'T1.21': { fl: '100', fl_label: 'All other types — must comply with appropriate Parts of A17.1 and A17.3',
+    s2013: '§8.4', s2019: '§8.4', notes: 'Seismic / earthquake requirements — field verify specific subsection.' },
+
+  // TRACTION CAT 5
+  'T5.1': { fl_multi: [{v:'229', l:'Car and counterweight safeties'},{v:'508', l:'Car & ctwt safeties and guiding members'}],
+    s2013: '§2.17.3, §8.10.2.2', s2019: '§2.17.3, §8.10.2.2', verified: ['2013','2019'],
+    a173: '§3.5' },
+  'T5.2': { fl_multi: [{v:'229', l:'Car and counterweight safeties'},{v:'329', l:'Counterweight safeties'},{v:'508', l:'Car & ctwt safeties and guiding members'}],
+    s2013: '§2.17.5', s2019: '§2.17.5',
+    a173: '§3.5.2' },
+  'T5.3': { fl: '213', fl_label: 'Governor, overspeed switch, and seal',
+    s2013: '§2.18.2', s2019: '§2.18.2', verified: ['2013'],
+    a173: '§3.6' },
+  'T5.4': { fl_multi: [{v:'512', l:'Car buffer'},{v:'328', l:'Counterweight and counterweight buffer'}],
+    s2013: '§2.22', s2019: '§2.22', verified: ['2013'],
+    a173: '§3.1' },
+  'T5.5': { fl: '217', fl_label: 'Machine brake',
+    s2013: '§2.24.8.3', s2019: '§2.24.8.3', verified: ['2013','2019'],
+    a173: '§3.8' },
+  'T5.6': { fl: '243', fl_label: 'Emergency brake, ACOP & UCM protections',
+    s2013: '§2.19.1, §8.10.2.2.7', s2019: '§2.19.1, §8.10.2.2.7', verified: ['2013','2019'],
+    a173: '§3.13.1' },
+  'T5.7': { fl: '243', fl_label: 'Emergency brake, ACOP & UCM protections',
+    s2013: '§2.19.2, §8.10.2.2.8', s2019: '§2.19.2, §8.10.2.2.8', verified: ['2013','2019'],
+    a173: '§3.13.2' },
+  'T5.8': { fl: '117', fl_label: 'Standby power operation',
+    s2013: '§2.27.2', s2019: '§2.27.2', verified: ['2013','2019'],
+    a173: '§3.11.2' },
+  'T5.9': { fl: '323', fl_label: 'Suspension, Compensation, Governor systems',
+    s2013: '§8.6.4', s2019: '§8.6.4',
+    a173: '§3.12',
+    notes: 'Wire rope inspection criteria per A17.6 referenced from A17.1 §8.6.4. A17.3 §3.12 = Suspension Means and Their Connections.' },
+  'T5.10': { fl: '323', fl_label: 'Suspension, Compensation, Governor systems',
+    s2013: '§8.10.2.2.5', s2019: '§8.10.2.2.5',
+    a173: '§3.12' },
+
+  // MRL CAT 1
+  'MRL1.1': { fl_multi: [{v:'245', l:'Inspection operation & Inspection Hierarchy'},{v:'303', l:'Top-of-car operating device'},{v:'809', l:'Inspection and test panels (MRL)'}],
+    s2013: '§2.26.1.4', s2019: '§2.26.1.4', verified: ['2013'] },
+  'MRL1.2': { fl_multi: [{v:'801', l:'Access to machine/control room/space'},{v:'802', l:'Access doors and openings'}],
+    s2013: '§2.7.5', s2019: '§2.7.5' },
+  'MRL1.3': { fl: '501', fl_label: 'Pit access, lighting, stop switch, & condition',
+    s2013: '§2.7.5.1, §2.26.2.5', s2019: '§2.7.5.1, §2.26.2.5' },
+  'MRL1.4': { fl: '217', fl_label: 'Machine brake',
+    s2013: '§2.24.8', s2019: '§2.24.8', verified: ['2013','2019'] },
+  'MRL1.5': { fl: '217', fl_label: 'Machine brake',
+    s2013: '§2.24.8.4, §2.26.6', s2019: '§2.24.8.4, §2.26.6', verified: ['2013','2019'],
+    notes: '§2.24.8.4 "Means for Manual Release" verified in both A17.1-2013 and A17.1-2019.' },
+  'MRL1.6': { fl: '258', fl_label: 'Evacuation procedures',
+    s2013: '§2.27.7', s2019: '§2.27.7', notes: 'Evacuation procedures section — field verify.' },
+  'MRL1.7': { fl: '244', fl_label: 'Auxiliary power lowering operation',
+    s2013: '§2.27.2', s2019: '§2.27.2' },
+  'MRL1.8': { fl_multi: [{v:'304', l:'Top of car clearance, refuge space, and standard railing'},{v:'502', l:'Bottom clearance; runby; refuge space'}],
+    s2013: '§2.4.7, §2.7.3', s2019: '§2.4.7, §2.7.3' },
+  'MRL1.9': { fl: '304', fl_label: 'Top of car clearance, refuge space, and standard railing',
+    s2013: '§2.7.3', s2019: '§2.7.3' },
+  'MRL1.10': { fl: '502', fl_label: 'Bottom clearance; runby; refuge space',
+    s2013: '§2.4.6', s2019: '§2.4.6' },
+  'MRL1.11': { fl_multi: [{v:'105', l:'Car lighting and receptacles'},{v:'203', l:'Lighting and receptacles (machinery)'}],
+    s2013: '§2.7.9.1', s2019: '§2.7.9.1' },
+  'MRL1.12': { fl: '243', fl_label: 'Emergency brake, ACOP & UCM protections',
+    s2013: '§2.19', s2019: '§2.19', verified: ['2013','2019'] },
+
+  // MRL CAT 5
+  'MRL5.1': { fl_multi: [{v:'217', l:'Machine brake'},{v:'260', l:'Test records'}],
+    s2013: '§2.24.8.3', s2019: '§2.24.8.3', verified: ['2013','2019'] },
+  'MRL5.2': { fl: '217', fl_label: 'Machine brake',
+    s2013: '§2.24.8', s2019: '§2.24.8', verified: ['2013','2019'] },
+  'MRL5.3': { fl: '243', fl_label: 'Emergency brake, ACOP & UCM protections',
+    s2013: '§2.19', s2019: '§2.19', verified: ['2013','2019'] },
+  'MRL5.4': { fl: '258', fl_label: 'Evacuation procedures',
+    s2013: '§2.27.7', s2019: '§2.27.7' },
+  'MRL5.5': { fl_multi: [{v:'261', l:'Maintenance Control Program'},{v:'240', l:'Maintenance Records'}],
+    s2013: '§8.6', s2019: '§8.6' },
+  'MRL5.6': { fl_multi: [{v:'304', l:'Top of car clearance, refuge space'},{v:'502', l:'Bottom clearance; runby; refuge space'}],
+    s2013: '§2.4.7', s2019: '§2.4.7' },
+
+  // ESCALATOR CAT 1
+  'E1.1': { fl: '709', fl_label: 'Steps and upthrust device & Treadways',
+    s2013: '§6.1.3', s2019: '§6.1.3',
+    a173: '§5.1' },
+  'E1.2': { fl: '714', fl_label: 'Speed',
+    s2013: '§6.1.4.1', s2019: '§6.1.4.1', verified: ['2013','2019'],
+    a173: '§5.1' },
+  'E1.3': { fl: '703', fl_label: 'Handrails',
+    s2013: '§6.1.3.5', s2019: '§6.1.3.5',
+    a173: '§5.1' },
+  'E1.4': { fl: '710', fl_label: 'Operating and safety devices',
+    s2013: '§6.1.5.3', s2019: '§6.1.5.3', verified: ['2013','2019'],
+    a173: '§5.2',
+    notes: '§6.1.5.3.1(c) limits avg retardation to 0.91 m/s² (3 ft/s²) and peak retardation at same threshold for >0.125 s. A17.3 §5.2 = Brakes.' },
+  'E1.5': { fl: '710', fl_label: 'Operating and safety devices',
+    s2013: '§6.1.5.3', s2019: '§6.1.5.3', verified: ['2013','2019'],
+    a173: '§5.2' },
+  'E1.6': { fl_multi: [{v:'710', l:'Operating and safety devices'},{v:'752', l:'Stop switches and inspection control (internal)'}],
+    s2013: '§6.1.6.3.1', s2019: '§6.1.6.3.1',
+    a173: '§5.3.2',
+    notes: 'A17.3 §5.3.2 verified — Emergency Stop Buttons at top and bottom landings.' },
+  'E1.7': { fl: '761', fl_label: 'Step or pallet level device',
+    s2013: '§6.1.6.3.3', s2019: '§6.1.6.3.3',
+    notes: 'Step level device not explicitly listed in A17.3-2020 §5.3 — newer safety device. Field verify if cited.' },
+  'E1.8': { fl: '759', fl_label: 'Step upthrust device',
+    s2013: '§6.1.6.3.4', s2019: '§6.1.6.3.4',
+    notes: 'Step upthrust device not explicitly listed in A17.3-2020 §5.3 — newer safety device.' },
+  'E1.9': { fl: '760', fl_label: 'Missing step or pallet device',
+    s2013: '§6.1.6.3.5', s2019: '§6.1.6.3.5',
+    notes: 'Missing step device not explicitly listed in A17.3-2020 §5.3 — newer safety device.' },
+  'E1.10': { fl: '758', fl_label: 'Broken treadway or step chain device',
+    s2013: '§6.1.6.3.7', s2019: '§6.1.6.3.7',
+    a173: '§5.3.4',
+    notes: 'A17.3 §5.3.4 verified — Broken Step-Chain Device, manual-reset type required.' },
+  'E1.11': { fl: '756', fl_label: 'Broken drive chain and disconnected motor safety device',
+    s2013: '§6.1.6.3.8', s2019: '§6.1.6.3.8',
+    a173: '§5.3.6',
+    notes: 'A17.3 §5.3.6 verified — Broken Drive-Chain Device.' },
+  'E1.12': { fl: '757', fl_label: 'Reversal stop switch',
+    s2013: '§6.1.6.3.9', s2019: '§6.1.6.3.9',
+    a173: '§5.3.9',
+    notes: 'A17.3 §5.3.9 verified — Reversal Stop Device.' },
+  'E1.13': { fl: '707', fl_label: 'Combplate and comb step impact device',
+    s2013: '§6.1.6.3.11', s2019: '§6.1.6.3.11',
+    notes: 'Combplate impact device not explicitly listed in A17.3-2020 §5.3 — typically post-A17.1b-1992. Field verify for older units.' },
+  'E1.14': { fl_multi: [{v:'763', l:'Handrail systems and safety devices'},{v:'703', l:'Handrails'}],
+    s2013: '§6.1.6.3.10', s2019: '§6.1.6.3.10',
+    notes: 'Handrail entry device — newer safety device, not in A17.3-2020 §5.3.' },
+  'E1.15': { fl_multi: [{v:'763', l:'Handrail systems and safety devices'},{v:'703', l:'Handrails'}],
+    s2013: '§6.1.6.3.6', s2019: '§6.1.6.3.6',
+    notes: 'Handrail speed monitor — newer safety device, not in A17.3-2020 §5.3.' },
+  'E1.16': { fl: '711', fl_label: 'Skirt obstruction device',
+    s2013: '§6.1.6.3.12', s2019: '§6.1.6.3.12',
+    a173: '§5.3.7',
+    notes: 'A17.3 §5.3.7 verified — Skirt Obstruction Device.' },
+  'E1.17': { fl: '717', fl_label: 'Step/skirt clearances, panels, and performance index',
+    s2013: '§6.1.3.3', s2019: '§6.1.3.3',
+    a173: '§5.1' },
+  'E1.18': { fl: '717', fl_label: 'Step/skirt clearances, panels, and performance index',
+    s2013: '§6.1.3.3.5', s2019: '§6.1.3.3.5',
+    a173: '§5.1' },
+  'E1.19': { fl: '754', fl_label: 'Drive machine and brake',
+    s2013: '§6.1.5.3', s2019: '§6.1.5.3',
+    a173: '§5.2' },
+  'E1.20': { fl: '705', fl_label: 'Lighting',
+    s2013: '§6.1.3.6', s2019: '§6.1.3.6',
+    a173: '§5.4' },
+  'E1.21': { fl_multi: [{v:'710', l:'Operating and safety devices'},{v:'752', l:'Stop switches and inspection control'}],
+    s2013: '§6.1.6.3.1', s2019: '§6.1.6.3.1',
+    a173: '§5.3.2' },
+  'E1.22': { fl: '706', fl_label: 'Caution signs',
+    s2013: '§6.1.6.5', s2019: '§6.1.6.5',
+    a173: '§5.3.11',
+    notes: 'A17.3 §5.3.11 verified — Caution sign with required wording: Caution / Passengers Only / Hold Handrail / Attend Children / Avoid Sides.' },
+  'E1.23': { fl: '717', fl_label: 'Step/skirt clearances, panels, and performance index',
+    s2013: '§6.1.3.3.9, §8.6.8.3', s2019: '§6.1.3.3.9, §8.6.8.3', verified: ['2013', '2019'],
+    a173: '§5.1.11',
+    notes: 'A17.1 limits per §8.6.8.3.3: 0.15 (standard); 0.25 (A17.1a-2002+ with skirt deflector per §6.1.3.3.10); 0.40 (A17.1-2000 and earlier with deflector). A17.3 §5.1.11 verified — same 0.15 / 0.4 limits. Required in FL — Violation 717.' },
+
+  // ESCALATOR CAT 5
+  'E5.1': { fl: '754', fl_label: 'Drive machine and brake',
+    s2013: '§6.1.5.3, §8.11.5', s2019: '§6.1.5.3, §8.11.5',
+    a173: '§5.2' },
+  'E5.2': { fl: '754', fl_label: 'Drive machine and brake',
+    s2013: '§6.1.5.3.5', s2019: '§6.1.5.3.5',
+    a173: '§5.2' },
+  'E5.3': { fl: '755', fl_label: 'Speed governor',
+    s2013: '§6.1.5.3.6', s2019: '§6.1.5.3.6',
+    a173: '§5.3.3',
+    notes: 'A17.3 §5.3.3 verified — Speed Governor (required unless AC squirrel-cage induction motor); must interrupt power if step speed exceeds 40% above rated speed. A17.1 has tighter limit (typically 1.4× rated).' },
+  'E5.4': { fl: '762', fl_label: 'Step/pallets chains and trusses',
+    s2013: '§6.1.3.10', s2019: '§6.1.3.10',
+    a173: '§5.1' },
+  'E5.5': { fl: '762', fl_label: 'Step/pallets chains and trusses',
+    s2013: 'AHJ / manufacturer', s2019: 'AHJ / manufacturer' },
+
+  // MOVING WALK CAT 1
+  'MW1.1': { fl: '709', fl_label: 'Steps and upthrust device & Treadways',
+    s2013: '§6.2', s2019: '§6.2' },
+  'MW1.2': { fl: '714', fl_label: 'Speed',
+    s2013: '§6.2.4', s2019: '§6.2.4' },
+  'MW1.3': { fl: '703', fl_label: 'Handrails',
+    s2013: '§6.2.3.5', s2019: '§6.2.3.5' },
+  'MW1.4': { fl: '710', fl_label: 'Operating and safety devices',
+    s2013: '§6.2.5', s2019: '§6.2.5' },
+  'MW1.5': { fl_multi: [{v:'710', l:'Operating and safety devices'},{v:'752', l:'Stop switches and inspection control'}],
+    s2013: '§6.2.6', s2019: '§6.2.6' },
+  'MW1.6': { fl: '760', fl_label: 'Missing step or pallet device',
+    s2013: '§6.2.6', s2019: '§6.2.6' },
+  'MW1.7': { fl: '758', fl_label: 'Broken treadway or step chain device',
+    s2013: '§6.2.6', s2019: '§6.2.6' },
+  'MW1.8': { fl: '707', fl_label: 'Combplate and comb step impact device',
+    s2013: '§6.2.6', s2019: '§6.2.6' },
+  'MW1.9': { fl: '757', fl_label: 'Reversal stop switch',
+    s2013: '§6.2.6', s2019: '§6.2.6' },
+  'MW1.10': { fl_multi: [{v:'763', l:'Handrail systems and safety devices'},{v:'703', l:'Handrails'}],
+    s2013: '§6.2.6', s2019: '§6.2.6' },
+  'MW1.11': { fl_multi: [{v:'763', l:'Handrail systems and safety devices'},{v:'703', l:'Handrails'}],
+    s2013: '§6.2.6', s2019: '§6.2.6' },
+  'MW1.12': { fl: '717', fl_label: 'Step/skirt clearances, panels, and performance index',
+    s2013: '§6.2.3', s2019: '§6.2.3' },
+  'MW1.13': { fl: '754', fl_label: 'Drive machine and brake',
+    s2013: '§6.2.5', s2019: '§6.2.5' },
+
+  // MOVING WALK CAT 5
+  'MW5.1': { fl: '754', fl_label: 'Drive machine and brake',
+    s2013: '§6.2.5', s2019: '§6.2.5' },
+  'MW5.2': { fl: '754', fl_label: 'Drive machine and brake',
+    s2013: '§6.2.5', s2019: '§6.2.5' },
+  'MW5.3': { fl: '755', fl_label: 'Speed governor',
+    s2013: '§6.2.5', s2019: '§6.2.5' },
+  'MW5.4': { fl: '762', fl_label: 'Step/pallets chains and trusses',
+    s2013: '§6.2.3', s2019: '§6.2.3' }
+};
+
+// Year-dependent FL firefighters' service violations
+function flFirefightersViolation(year) {
+  const y = parseInt(year);
+  if (y >= 2013) return { v: '608', l: 'A17.1-2013 & A17.1-2016 (and later)' };
+  if (y >= 2009) return { v: '607', l: 'A17.1b-2009' };
+  if (y >= 2005) return { v: '606', l: 'A17.1a-2005' };
+  if (y >= 2000) return { v: '605', l: 'A17.1-2000' };
+  if (y >= 1989) return { v: '604', l: 'A17.1-1989 through A17.1d-2000' };
+  if (y >= 1984) return { v: '603', l: 'A17.1-1984 through A17.1a-1988 & A17.3-1996' };
+  if (y >= 1981) return { v: '602', l: 'A17.1-1981 through A17.1b-1983' };
+  return { v: '601', l: 'A17.1b-1973 through A17.1b-1980' };
+}
+
+const JURISDICTIONS = {
+  'NONE':    { name: 'No Jurisdiction (Generic A17.1 only)', flags: { showFL: false, a173overlay: false } },
+  'FL':      { name: 'Florida (DBPR/BES)', flags: { showFL: true, a173overlay: false },
+    notes: 'Inspections reported on DBPR form (5023_071) using Violation numbers. Adopts A17.1 by FBC Ch. 30 reference + Ch. 399 FS. Inspector cites A17.1 section in the Comments/Description field — FAC 61C-5 typically NOT cited in field write-ups. FL requires step/skirt performance index on escalators (Violation 717).' },
+  'NV':      { name: 'Nevada (+ A17.3-2020 overlay)', flags: { showFL: false, a173overlay: true },
+    notes: 'Adopts A17.1 + enforces A17.3-2020 on existing installations not exempt under state regulations. ⚠️ Key A17.3 differences from current A17.1: (1) Anti-creep tolerance is 3 in. (76 mm) per A17.3 §4.7.3, NOT 1 in. (2) Firefighters\u2019 service defaults to A17.1-1987 Rules 211.3-211.8 per A17.3 §3.11.3, unless later edition applies. (3) Newer safety devices (handrail entry, step level, step upthrust, missing step) generally not in A17.3 — those are post-A17.1b-1992 additions and require field verify for older installations.' },
+  'TX':      { name: 'Texas (TDLR)', flags: { showFL: false, a173overlay: false },
+    notes: 'Texas Department of Licensing and Regulation. Adopts A17.1 via 16 TAC Ch. 74 with minimal amendments. Generally aligns with current A17.1 edition adopted by reference.' },
+  'CO':      { name: 'Colorado (OPS / Denver FPB)', flags: { showFL: false, a173overlay: false },
+    notes: 'CO regulation: 7 CCR 1101-8 (Conveyance Safety). Inspection form uses Edition/Year/Reference format (e.g., A17.1 | 2019 | 2.27.1.1). A17.3 EXEMPT for existing CO conveyances unless material risk exists or substantial alteration performed (per 2-7). Hydraulic Cat 5 ONLY required if equipped with safeties, plunger gripper, governor, oil buffer, or overspeed valve (per Table 2-3-2). Denver FPB (within CO) aligns CO expiration to witness-test month — annual test must be performed within 60 days before annual inspection month.' }
+};
+
+const CODE_EDITIONS = ['2007', '2010', '2013', '2016', '2019', '2022'];
+const VERIFIED_EDITIONS = ['2013', '2019'];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+
+let state = {
+  mode: 'landing',  // 'landing' | 'wizard' | 'inspection'
+  wizardStep: 1,
+  wizardSelection: null,  // current step's selected value
+  tab: 'hydraulic',
+  cat: 'cat1',
+  jurisdiction: 'FL',  // FL, NV, TX, CO, NONE
+  codeEdition: '2019', // 2007, 2010, 2013, 2016, 2019, 2022
+  data: {} // { testId: { status: 'pass'|'fail'|'pending', expanded: bool, inputs: {}, notes: '' } }
+};
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('inspector_state');
+    if (saved) state.data = JSON.parse(saved);
+    const ctx = localStorage.getItem('inspector_context');
+    if (ctx) {
+      const c = JSON.parse(ctx);
+      if (c.jurisdiction) state.jurisdiction = c.jurisdiction;
+      if (c.codeEdition) state.codeEdition = c.codeEdition;
+    }
+  } catch(e) { console.warn(e); }
+}
+function saveState() {
+  try {
+    localStorage.setItem('inspector_state', JSON.stringify(state.data));
+    localStorage.setItem('inspector_context', JSON.stringify({ jurisdiction: state.jurisdiction, codeEdition: state.codeEdition }));
+  }
+  catch(e) { console.warn(e); }
+}
+
+function renderCitations(testId) {
+  const c = CITATIONS[testId];
+  if (!c) return '';
+
+  const j = state.jurisdiction;
+  const ed = state.codeEdition;
+  const jur = JURISDICTIONS[j];
+  const showFL = jur && jur.flags.showFL;
+  const a173overlay = jur && jur.flags.a173overlay;
+
+  let rows = [];
+
+  // FL Violation rendering (only when jurisdiction = FL)
+  if (showFL) {
+    if (c.fl_byyear) {
+      // Year-dependent firefighters' service
+      const ff = flFirefightersViolation(ed);
+      rows.push({ tag: 'FL #' + ff.v, tag_class: '', value: ff.l, copy: 'Violation ' + ff.v });
+    } else if (c.fl_multi) {
+      c.fl_multi.forEach(item => {
+        rows.push({ tag: 'FL #' + item.v, tag_class: '', value: item.l, copy: 'Violation ' + item.v });
+      });
+    } else if (c.fl) {
+      rows.push({ tag: 'FL #' + c.fl, tag_class: '', value: c.fl_label || '', copy: 'Violation ' + c.fl });
+    }
+  }
+
+  // A17.1 section by edition
+  const sectionKey = 's' + ed;
+  const section = c[sectionKey];
+  if (section) {
+    const isVerified = c.verified && c.verified.indexOf(ed) >= 0;
+    const verifiedBadge = isVerified
+      ? '<span class="cite-verified">VERIFIED</span>'
+      : (VERIFIED_EDITIONS.indexOf(ed) >= 0 ? '<span class="cite-unverified">VERIFY</span>' : '');
+    rows.push({
+      tag: 'A17.1-' + ed,
+      tag_class: 'section',
+      value: section + verifiedBadge,
+      copy: 'A17.1-' + ed + ' ' + section
+    });
+  } else if (c.s2019) {
+    // Fall back to closest verified edition
+    rows.push({
+      tag: 'A17.1-2019',
+      tag_class: 'section',
+      value: c.s2019 + ' <span class="cite-unverified">FALLBACK</span>',
+      copy: 'A17.1-2019 ' + c.s2019
+    });
+  }
+
+  // A17.3 overlay for NV
+  if (a173overlay && c.a173) {
+    rows.push({ tag: 'A17.3', tag_class: 'a173', value: c.a173, copy: 'A17.3 ' + c.a173 });
+  }
+
+  if (rows.length === 0) return '';
+
+  return `
+    <div class="citations">
+      <div class="citations-header">📋 Code Reference · ${jur ? jur.name : 'A17.1'} · A17.1-${ed}</div>
+      ${rows.map((r, i) => `
+        <div class="cite-row">
+          <span class="cite-tag ${r.tag_class}">${r.tag}</span>
+          <div class="cite-body">
+            <div class="cite-value">${r.value}</div>
+          </div>
+          <button class="cite-copy" onclick="event.stopPropagation(); copyCite(this, '${r.copy.replace(/'/g, "\\'")}')">Copy</button>
+        </div>
+      `).join('')}
+      ${c.notes ? '<div class="cite-notes">' + c.notes + '</div>' : ''}
+    </div>
+  `;
+}
+
+function copyCite(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+  }).catch(() => {
+    // Fallback for older browsers
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); btn.textContent = '✓ Copied'; btn.classList.add('copied'); } catch(e) {}
+    document.body.removeChild(ta);
+    setTimeout(() => { btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+function updateContextNotice() {
+  const j = state.jurisdiction;
+  const jur = JURISDICTIONS[j];
+  const el = document.getElementById('contextNotice');
+  if (!el) return;
+  if (jur && jur.notes) {
+    el.textContent = jur.notes;
+  } else {
+    el.textContent = '';
+  }
+}
+
+/* ============================================================
+   SCREEN ROUTING + WIZARD
+   ============================================================ */
+
+const WIZARD_STEPS = {
+  1: {
+    title: 'Where is this inspection?',
+    subtitle: 'Pick the jurisdiction. The tool will format citations accordingly.',
+    summaryKey: null,
+    options: () => Object.keys(JURISDICTIONS).map(k => ({
+      value: k,
+      icon: k === 'FL' ? '🌴' : k === 'NV' ? '🎰' : k === 'TX' ? '⭐' : k === 'CO' ? '⛰️' : '📋',
+      title: JURISDICTIONS[k].name,
+      desc: JURISDICTIONS[k].notes || 'Generic A17.1 — no state-specific overlay.'
+    }))
+  },
+  2: {
+    title: 'What code edition was the unit installed (or last altered) under?',
+    subtitle: 'Pick the code edition that governs this device. Use the most recent alteration date if the unit has been altered since installation.',
+    summaryKey: 'jurisdiction',
+    options: () => [
+      { value: '2007', icon: '📕', title: 'A17.1-2007', desc: 'Multi-part numbering introduced. Citations not yet verified — sections shown will be marked FALLBACK.', badge: 'verify' },
+      { value: '2010', icon: '📕', title: 'A17.1-2010', desc: 'Pre-FFS revisions. Citations mostly stable to 2019 numbering.', badge: 'verify' },
+      { value: '2013', icon: '📗', title: 'A17.1-2013', desc: 'Major firefighters\' service revisions. Citations verified against actual PDF.', badge: 'verified' },
+      { value: '2016', icon: '📘', title: 'A17.1-2016', desc: 'Section numbering same as 2013. Citations inherited.', badge: 'verify' },
+      { value: '2019', icon: '📗', title: 'A17.1-2019', desc: '§2.27.1.1 revised in its entirety. Citations verified against actual PDF.', badge: 'verified' },
+      { value: '2022', icon: '📙', title: 'A17.1-2022', desc: 'Section numbering same as 2019 for most items. Citations not yet verified.', badge: 'verify' }
+    ]
+  },
+  3: {
+    title: 'What equipment are you inspecting?',
+    subtitle: 'Pick the equipment type. For MRL traction, choose "Traction MRL" — the inspection will include MRL-specific items in addition to standard traction.',
+    summaryKey: 'codeEdition',
+    options: () => [
+      { value: 'hydraulic', icon: '💧', title: 'Hydraulic Elevator', desc: 'Direct-acting or roped hydraulic. Conventional power unit with relief valve, anti-creep, low-oil protection.' },
+      { value: 'traction', icon: '⚙️', title: 'Traction Elevator', desc: 'Geared or gearless traction with machine room. Conventional brake, governor, safeties, terminal stops.' },
+      { value: 'mrl', icon: '🔧', title: 'Traction MRL (Machine Room-Less)', desc: 'Machine in hoistway. Adds brake monitoring, pit access switch, manual brake release, refuge spaces. Includes standard traction items.' },
+      { value: 'escalator', icon: '↗️', title: 'Escalator', desc: 'Conventional escalator. Step/skirt index, comb plate impact, broken chain detection, brake stopping distance.' },
+      { value: 'movingwalk', icon: '➡️', title: 'Moving Walk', desc: 'Pallet or belt type moving walkway. Similar safety devices to escalator with different geometry.' }
+    ]
+  },
+  4: {
+    title: 'Category 1 or Category 5?',
+    subtitle: 'Pick the test category. Cat 1 = annual periodic test. Cat 5 = 5-year witnessed test with rated load.',
+    summaryKey: 'equipment',
+    options: () => {
+      const opts = [
+        { value: 'cat1', icon: '📅', title: 'Category 1 — Annual', desc: 'Yearly periodic inspection. Operational tests, visual inspection, safety device function checks. Performed without rated load for most items.' }
+      ];
+      // CO conditional rule for hydraulic Cat 5
+      const isHydroNoSafety = state.tab === 'hydraulic';
+      const isCO = state.jurisdiction === 'CO';
+      let cat5Desc = '5-year witnessed test with rated load. Dynamic safety test, governor overspeed trip, brake hold at 125% rated load, oil buffer test.';
+      if (isHydroNoSafety && isCO) {
+        cat5Desc += ' ⚠️ Colorado: Cat 5 only required if equipped with car safeties, plunger gripper, governor, oil buffer, or overspeed valve (per 7 CCR 1101-8 Table 2-3-2).';
+      }
+      opts.push({ value: 'cat5', icon: '🔬', title: 'Category 5 — 5-Year', desc: cat5Desc });
+      return opts;
+    }
+  }
+};
+
+const EQUIPMENT_TAB_MAP = {
+  'hydraulic': 'hydraulic',
+  'traction': 'traction',
+  'mrl': 'mrl',
+  'escalator': 'escalator',
+  'movingwalk': 'movingwalk'
+};
+
+function setMode(mode) {
+  state.mode = mode;
+  document.body.classList.remove('mode-landing', 'mode-wizard', 'mode-inspection');
+  document.body.classList.add('mode-' + mode);
+  document.querySelectorAll('.app-screen').forEach(el => el.classList.remove('active'));
+  const screenEl = document.getElementById('screen' + mode.charAt(0).toUpperCase() + mode.slice(1));
+  if (screenEl) screenEl.classList.add('active');
+  saveState();
+}
+
+function goToLanding() {
+  setMode('landing');
+  state.wizardStep = 1;
+  state.wizardSelection = null;
+}
+
+function goToBrowse() {
+  setMode('inspection');
+  render();
+}
+
+function startWizard() {
+  state.wizardStep = 1;
+  state.wizardSelection = state.jurisdiction;  // pre-fill with current state
+  setMode('wizard');
+  renderWizard();
+}
+
+function renderWizard() {
+  const step = WIZARD_STEPS[state.wizardStep];
+  if (!step) return;
+
+  // Update progress dots
+  document.querySelectorAll('.step-dot').forEach(dot => {
+    const s = parseInt(dot.dataset.step);
+    dot.classList.remove('active', 'done');
+    if (s < state.wizardStep) dot.classList.add('done');
+    else if (s === state.wizardStep) dot.classList.add('active');
+  });
+
+  document.getElementById('wizardStepCounter').textContent = 'STEP ' + state.wizardStep + ' OF 4';
+  document.getElementById('wizardTitle').textContent = step.title;
+  document.getElementById('wizardSubtitle').textContent = step.subtitle;
+
+  // Render summary
+  const summaryEl = document.getElementById('wizardSummary');
+  if (state.wizardStep > 1) {
+    summaryEl.style.display = 'block';
+    let summary = '';
+    if (state.wizardStep > 1) {
+      const jur = JURISDICTIONS[state.jurisdiction];
+      summary += '<div class="wizard-summary-row"><span class="key">Jurisdiction</span><span class="val">' + (jur ? jur.name : state.jurisdiction) + '</span></div>';
+    }
+    if (state.wizardStep > 2) {
+      summary += '<div class="wizard-summary-row"><span class="key">Code Edition</span><span class="val">A17.1-' + state.codeEdition + '</span></div>';
+    }
+    if (state.wizardStep > 3) {
+      const eqLabels = { hydraulic: 'Hydraulic', traction: 'Traction', mrl: 'Traction MRL', escalator: 'Escalator', movingwalk: 'Moving Walk' };
+      summary += '<div class="wizard-summary-row"><span class="key">Equipment</span><span class="val">' + (eqLabels[state.tab] || state.tab) + '</span></div>';
+    }
+    summaryEl.innerHTML = summary;
+  } else {
+    summaryEl.style.display = 'none';
+  }
+
+  // Render options
+  const options = step.options();
+  const optsEl = document.getElementById('wizardOptions');
+  optsEl.innerHTML = options.map(opt => `
+    <button class="wizard-option" data-value="${opt.value}" onclick="selectWizardOption('${opt.value}')">
+      <span class="opt-icon">${opt.icon}</span>
+      <div class="opt-body">
+        <div class="opt-title">${opt.title}</div>
+        <div class="opt-desc">${opt.desc}</div>
+      </div>
+      ${opt.badge ? '<span class="opt-badge ' + opt.badge + '">' + (opt.badge === 'verified' ? '✓ VERIFIED' : 'VERIFY') + '</span>' : ''}
+    </button>
+  `).join('');
+
+  // Restore selection if any
+  if (state.wizardSelection) {
+    const sel = optsEl.querySelector('[data-value="' + state.wizardSelection + '"]');
+    if (sel) sel.classList.add('selected');
+    document.getElementById('wizardNextBtn').disabled = false;
+  } else {
+    document.getElementById('wizardNextBtn').disabled = true;
+  }
+
+  // Update Next button label on last step
+  document.getElementById('wizardNextBtn').textContent = state.wizardStep === 4 ? 'Start Inspection →' : 'Next →';
+}
+
+function selectWizardOption(value) {
+  state.wizardSelection = value;
+  document.querySelectorAll('.wizard-option').forEach(el => el.classList.remove('selected'));
+  const sel = document.querySelector('.wizard-option[data-value="' + value + '"]');
+  if (sel) sel.classList.add('selected');
+  document.getElementById('wizardNextBtn').disabled = false;
+}
+
+function wizardNext() {
+  if (!state.wizardSelection) return;
+
+  // Apply selection to state
+  switch (state.wizardStep) {
+    case 1:
+      state.jurisdiction = state.wizardSelection;
+      break;
+    case 2:
+      state.codeEdition = state.wizardSelection;
+      break;
+    case 3:
+      state.tab = EQUIPMENT_TAB_MAP[state.wizardSelection] || state.wizardSelection;
+      break;
+    case 4:
+      state.cat = state.wizardSelection;
+      finishWizard();
+      return;
+  }
+
+  state.wizardStep++;
+  state.wizardSelection = null;
+  saveState();
+  renderWizard();
+}
+
+function wizardBack() {
+  if (state.wizardStep === 1) {
+    goToLanding();
+    return;
+  }
+  state.wizardStep--;
+  // Restore selection from state for the prior step
+  switch (state.wizardStep) {
+    case 1: state.wizardSelection = state.jurisdiction; break;
+    case 2: state.wizardSelection = state.codeEdition; break;
+    case 3:
+      // Reverse-lookup from tab
+      for (const k in EQUIPMENT_TAB_MAP) {
+        if (EQUIPMENT_TAB_MAP[k] === state.tab) { state.wizardSelection = k; break; }
+      }
+      break;
+    case 4: state.wizardSelection = state.cat; break;
+  }
+  saveState();
+  renderWizard();
+}
+
+function finishWizard() {
+  // Sync dropdowns to new state
+  const jurSel = document.getElementById('jurisdictionSelect');
+  const edSel = document.getElementById('editionSelect');
+  if (jurSel) jurSel.value = state.jurisdiction;
+  if (edSel) edSel.value = state.codeEdition;
+  updateContextNotice();
+  setMode('inspection');
+  render();
+}
+
+function currentKey() { return state.tab + '_' + state.cat; }
+function currentTests() { return TESTS[currentKey()] || []; }
+
+const PANEL_INFO = {
+  hydraulic_cat1: { title: 'HYDRAULIC ELEVATOR — CATEGORY 1', meta: 'ANNUAL · A17.1 §8.11.3' },
+  hydraulic_cat5: { title: 'HYDRAULIC ELEVATOR — CATEGORY 5', meta: '5-YEAR · A17.1 §8.11.4' },
+  traction_cat1: { title: 'TRACTION ELEVATOR — CATEGORY 1', meta: 'ANNUAL · A17.1 §8.11.2.1' },
+  traction_cat5: { title: 'TRACTION ELEVATOR — CATEGORY 5', meta: '5-YEAR · A17.1 §8.11.2.2' },
+  mrl_cat1: { title: 'MRL ADDENDUM — CATEGORY 1', meta: 'ANNUAL · USE WITH TRACTION/HYDRAULIC ITEMS' },
+  mrl_cat5: { title: 'MRL ADDENDUM — CATEGORY 5', meta: '5-YEAR · USE WITH TRACTION/HYDRAULIC ITEMS' },
+  escalator_cat1: { title: 'ESCALATOR — CATEGORY 1', meta: 'ANNUAL · A17.1 §8.11.5.1' },
+  escalator_cat5: { title: 'ESCALATOR — CATEGORY 5', meta: '5-YEAR · A17.1 §8.11.5.2' },
+  movingwalk_cat1: { title: 'MOVING WALK — CATEGORY 1', meta: 'ANNUAL · A17.1 §8.11.5' },
+  movingwalk_cat5: { title: 'MOVING WALK — CATEGORY 5', meta: '5-YEAR · A17.1 §8.11.5' }
+};
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+
+function render() {
+  const info = PANEL_INFO[currentKey()];
+  document.getElementById('panelTitle').textContent = info.title;
+  document.getElementById('panelMeta').textContent = info.meta;
+
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === state.tab));
+  document.querySelectorAll('.subtab').forEach(t => t.classList.toggle('active', t.dataset.cat === state.cat));
+
+  const list = document.getElementById('testList');
+  const tests = currentTests();
+  list.innerHTML = tests.map(renderTest).join('');
+
+  // attach listeners
+  tests.forEach(t => {
+    const head = document.getElementById('head-' + t.id);
+    head.querySelector('.check-circle').addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleCheck(t.id);
+    });
+    head.addEventListener('click', () => toggleExpand(t.id));
+
+    if (t.calc) {
+      t.calc.inputs.forEach(inp => {
+        const el = document.getElementById('inp-' + t.id + '-' + inp.id);
+        if (el) {
+          el.addEventListener('input', () => recalc(t.id));
+          el.addEventListener('click', e => e.stopPropagation());
+        }
+      });
+      recalc(t.id);
+    }
+
+    const notes = document.getElementById('notes-' + t.id);
+    if (notes) {
+      notes.addEventListener('input', () => {
+        if (!state.data[t.id]) state.data[t.id] = {};
+        state.data[t.id].notes = notes.value;
+        saveState();
+      });
+      notes.addEventListener('click', e => e.stopPropagation());
+    }
+
+    const failBtn = document.getElementById('fail-' + t.id);
+    if (failBtn) {
+      failBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleFail(t.id);
+      });
+    }
+  });
+
+  updateProgress();
+}
+
+function renderTest(t) {
+  const d = state.data[t.id] || {};
+  const status = d.status || 'pending';
+  const expanded = d.expanded || false;
+
+  let circleClass = 'check-circle';
+  if (status === 'pass') circleClass += ' checked';
+  if (status === 'fail') circleClass += ' failed';
+
+  let testClass = 'test';
+  if (status === 'pass') testClass += ' checked';
+  if (status === 'fail') testClass += ' failed';
+  if (expanded) testClass += ' expanded';
+
+  let calcHTML = '';
+  if (t.calc) {
+    const inputs = (d.inputs || {});
+    calcHTML = `
+      <div class="calc">
+        <div class="calc-header">⚙ ${t.calc.label}</div>
+        ${t.calc.inputs.map(inp => `
+          <div class="calc-row">
+            <label>${inp.label}<span class="unit">${inp.unit}</span></label>
+            <input type="number" step="any" class="calc-input" id="inp-${t.id}-${inp.id}"
+              value="${inputs[inp.id] || ''}" placeholder="${inp.placeholder || ''}">
+          </div>
+        `).join('')}
+        <div class="calc-result" id="result-${t.id}">
+          <span class="label">Result</span>
+          <span class="value">— Awaiting input —</span>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="${testClass}" id="test-${t.id}">
+      <div class="test-head" id="head-${t.id}">
+        <div class="${circleClass}"></div>
+        <div class="test-info">
+          <div class="test-id">${t.id}</div>
+          <div class="test-title">${t.title}</div>
+          <div class="test-ref">${t.ref}</div>
+          ${t.applies ? `<div class="applies-badge ${t.applies}">${t.applies === 'all' ? 'APPLIES TO ALL' : (t.condition || 'CONDITIONAL')}</div>` : ''}
+        </div>
+        <div class="expand-arrow">▼</div>
+      </div>
+      <div class="test-body">
+        <div class="test-desc">${t.desc}</div>
+        ${renderCitations(t.id)}
+        ${FAIL_CRITERIA[t.id] ? `
+          <div class="fail-criteria">
+            <div class="fail-criteria-header">▲ FAILS IF</div>
+            <ul>${FAIL_CRITERIA[t.id].map(f => '<li>' + f + '</li>').join('')}</ul>
+          </div>
+        ` : ''}
+        ${calcHTML}
+        ${t.referenceTable ? `
+          <button class="ref-table-btn" onclick="event.stopPropagation(); toggleRefTable('${t.id}')">📊 View ${t.referenceTable.title}</button>
+          <div class="ref-table-panel" id="reftable-${t.id}">
+            <h4>${t.referenceTable.title}</h4>
+            <div class="ref-cite">${t.referenceTable.ref}</div>
+            ${t.referenceTable.note ? `<div class="ref-note">${t.referenceTable.note}</div>` : ''}
+            <table class="ref-table">
+              <thead><tr>${t.referenceTable.columns.map(c => '<th>' + c + '</th>').join('')}</tr></thead>
+              <tbody>${t.referenceTable.rows.map(r => '<tr>' + r.map(c => '<td>' + c + '</td>').join('') + '</tr>').join('')}</tbody>
+            </table>
+          </div>
+        ` : ''}
+        <textarea class="notes-input" id="notes-${t.id}" placeholder="Notes / observations / corrective action...">${d.notes || ''}</textarea>
+        <button class="fail-btn ${status === 'fail' ? 'active' : ''}" id="fail-${t.id}">
+          ${status === 'fail' ? '✕ MARKED FAIL — Tap to clear' : 'Mark as Fail / Non-Compliant'}
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function toggleCheck(id) {
+  if (!state.data[id]) state.data[id] = {};
+  const cur = state.data[id].status;
+  state.data[id].status = (cur === 'pass') ? 'pending' : 'pass';
+  saveState();
+  render();
+}
+
+function toggleFail(id) {
+  if (!state.data[id]) state.data[id] = {};
+  const cur = state.data[id].status;
+  state.data[id].status = (cur === 'fail') ? 'pending' : 'fail';
+  saveState();
+  render();
+}
+
+function toggleExpand(id) {
+  if (!state.data[id]) state.data[id] = {};
+  state.data[id].expanded = !state.data[id].expanded;
+  saveState();
+  render();
+}
+
+function recalc(testId) {
+  const tests = currentTests();
+  const t = tests.find(x => x.id === testId);
+  if (!t || !t.calc) return;
+
+  const values = {};
+  t.calc.inputs.forEach(inp => {
+    const el = document.getElementById('inp-' + testId + '-' + inp.id);
+    if (el) values[inp.id] = el.value;
+  });
+
+  if (!state.data[testId]) state.data[testId] = {};
+  state.data[testId].inputs = values;
+  saveState();
+
+  const result = t.calc.compute(values);
+  const el = document.getElementById('result-' + testId);
+  if (!el) return;
+
+  if (result.state === 'pending') {
+    el.className = 'calc-result';
+    el.innerHTML = `<span class="label">Result</span><span class="value">— ${result.text} —</span>`;
+  } else {
+    el.className = 'calc-result ' + result.state;
+    el.innerHTML = `
+      <span class="label">${result.label}</span>
+      <span class="value">${result.value}</span>
+      <span class="detail">${result.detail}</span>
+    `;
+  }
+}
+
+function updateProgress() {
+  const tests = currentTests();
+  let done = 0;
+  tests.forEach(t => {
+    const s = (state.data[t.id] || {}).status;
+    if (s === 'pass' || s === 'fail') done++;
+  });
+  const pct = tests.length ? (done / tests.length) * 100 : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent =
+    done + ' / ' + tests.length + ' ITEMS COMPLETE · ' + pct.toFixed(0) + '%';
+}
+
+/* ============================================================
+   TOOLBAR
+   ============================================================ */
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(state.data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'inspection_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importJSON(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      state.data = JSON.parse(e.target.result);
+      saveState();
+      render();
+    } catch (err) { alert('Invalid file.'); }
+  };
+  reader.readAsText(file);
+}
+
+function resetAll() {
+  if (!confirm('Clear all checkmarks, inputs, and notes? This cannot be undone.')) return;
+  state.data = {};
+  saveState();
+  render();
+}
+
+function toggleRefTable(id) {
+  const el = document.getElementById('reftable-' + id);
+  if (el) el.classList.toggle('open');
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    state.tab = t.dataset.tab;
+    // Reset to cat1 when switching equipment type
+    state.cat = 'cat1';
+    render();
+  });
+});
+document.querySelectorAll('.subtab').forEach(t => {
+  t.addEventListener('click', () => {
+    state.cat = t.dataset.cat;
+    render();
+  });
+});
+
+document.getElementById('jurisdictionSelect').addEventListener('change', (e) => {
+  state.jurisdiction = e.target.value;
+  saveState();
+  updateContextNotice();
+  render();
+});
+document.getElementById('editionSelect').addEventListener('change', (e) => {
+  state.codeEdition = e.target.value;
+  saveState();
+  render();
+});
+
+loadState();
+document.getElementById('jurisdictionSelect').value = state.jurisdiction;
+document.getElementById('editionSelect').value = state.codeEdition;
+updateContextNotice();
+
+// Always start at landing on fresh load (don't restore mode)
+// This makes the wizard discoverable; user can opt into browse mode
+state.mode = 'landing';
+setMode('landing');
+render();
+</script>
+
+</body>
+</html>
