@@ -734,6 +734,81 @@
   }
   .wizard-restart:hover { border-color: var(--amber); color: var(--amber); }
 
+  /* YEAR PICKER */
+  .year-picker {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .year-label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+  }
+  .year-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border-bright);
+    color: var(--amber);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 12px 14px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+  }
+  .year-input:focus { outline: none; border-color: var(--amber); }
+  .year-status {
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 32px;
+    padding: 8px 0;
+  }
+  .year-status .year-ok { color: var(--pass); }
+  .year-status .year-warn { color: #ff9966; }
+  .year-status .year-info { color: var(--text-dim); }
+  .year-chip-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-faint);
+    margin-top: 14px;
+    margin-bottom: 6px;
+  }
+  .year-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .year-chip {
+    background: var(--surface-2);
+    border: 1px solid var(--border-bright);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .year-chip:hover { border-color: var(--amber); color: var(--amber); }
+  .year-chip.verified {
+    border-color: var(--pass);
+    color: var(--pass);
+  }
+  .year-chip.verified:hover {
+    background: var(--pass);
+    color: #000;
+  }
+  .year-chip.warn { opacity: 0.75; }
+  .year-chip.warn:hover { opacity: 1; border-color: #ff9966; color: #ff9966; }
+
   /* Hide tabs/context when not in inspection mode */
   body.mode-landing .tabs,
   body.mode-wizard .tabs,
@@ -1913,19 +1988,18 @@ escalator_cat1: [
         };
       }
     }
-  }
-],
+  },
 
-/* ---------- ESCALATOR CAT 5 ---------- */
-escalator_cat5: [
-  { id: 'E5.1', title: 'Brake Test — Rated Load (where required)', ref: 'A17.1 §6.1.5.3.4 / 8.11.5',
-    desc: 'Where applicable per code/AHJ: verify stopping distance with rated brake load. Verify brake adjustment per manufacturer.' },
+  /* ----- Performance tests (formerly Cat 5 — actually part of annual per §8.11.4) ----- */
+
+  { id: 'E5.1', title: 'Brake Test — Rated Load (where required)', ref: 'A17.1 §6.1.5.3.4 / 8.11.4',
+    desc: 'Where applicable per code/AHJ: verify stopping distance with rated brake load. Verify brake adjustment per manufacturer. Per A17.1 §8.11.4, this is part of the annual inspection — escalators do not have a separate 5-year category like elevators.' },
 
   { id: 'E5.2', title: 'Auxiliary Brake (where equipped)', ref: 'A17.1 §6.1.5.3.5',
     desc: 'Required where rise exceeds 20 ft (6 m) or in some jurisdictions for all units. Test auxiliary brake independently of main brake. Verify stopping under load conditions per code.' },
 
   { id: 'E5.3', title: 'Speed Governor (where equipped)', ref: 'A17.1 §6.1.5.3.6',
-    desc: 'Test overspeed governor — must stop escalator before reaching 1.4× rated speed. Verify reset procedure.',
+    desc: 'Test overspeed governor — must stop escalator before reaching 1.4× rated speed (A17.1). A17.3 §5.3.3 allows up to 40% above rated for older units. Verify reset procedure.',
     calc: {
       label: 'Governor Trip Speed',
       inputs: [
@@ -1942,18 +2016,21 @@ escalator_cat5: [
           state: pass ? 'pass' : 'fail',
           label: pass ? 'COMPLIANT' : 'EXCEEDS LIMIT',
           value: ts.toFixed(1) + ' fpm · max ' + max.toFixed(1) + ' fpm',
-          detail: 'Must trip before 140% of rated. Currently ' + (ts/rs*100).toFixed(1) + '%.'
+          detail: 'Must trip before 140% of rated (A17.1). Currently ' + (ts/rs*100).toFixed(1) + '%.'
         };
       }
     }
   },
 
   { id: 'E5.4', title: 'Step Chain & Tension Carriage', ref: 'A17.1 §6.1.3.10',
-    desc: 'Cat 5 detailed inspection: chain elongation, pin wear, tension carriage travel, sprocket condition. Replace if outside manufacturer tolerance.' },
+    desc: 'Detailed inspection: chain elongation, pin wear, tension carriage travel, sprocket condition. Replace if outside manufacturer tolerance.' },
 
   { id: 'E5.5', title: 'Drive / Step Chain — Pull Test', ref: 'AHJ-dependent',
-    desc: 'Some jurisdictions require pull-load testing of step chain at Cat 5 or per manufacturer interval. Verify with AHJ.' }
+    desc: 'Some jurisdictions require pull-load testing of step chain at specified intervals or per manufacturer. Verify with AHJ.' }
 ],
+
+/* ---------- ESCALATOR CAT 5 (DEPRECATED — items merged into Cat 1 per A17.1 §8.11.4) ---------- */
+escalator_cat5: [],
 
 /* ---------- MRL ADDENDUM CAT 1 ---------- */
 /* These items apply IN ADDITION to standard Traction (or Hydraulic) Cat 1 items
@@ -2182,13 +2259,12 @@ movingwalk_cat1: [
     desc: 'Measure clearance between pallet/belt and comb teeth. Verify intermeshing depth and lateral alignment.' },
 
   { id: 'MW1.13', title: 'Brake — No Load', ref: 'A17.1 §6.2.5',
-    desc: 'Verify main brake stops walk within code range from operating speed (see MW1.4).' }
-],
+    desc: 'Verify main brake stops walk within code range from operating speed (see MW1.4).' },
 
-/* ---------- MOVING WALK CAT 5 ---------- */
-movingwalk_cat5: [
+  /* ----- Performance tests (formerly Cat 5 — actually part of annual per A17.1 §8.11.4) ----- */
+
   { id: 'MW5.1', title: 'Brake — Loaded (where required)', ref: 'AHJ / A17.1 §6.2.5',
-    desc: 'Where required: test brake stopping distance under loaded conditions.' },
+    desc: 'Where required: test brake stopping distance under loaded conditions. Per A17.1 §8.11.4, this is part of the annual inspection — moving walks do not have a separate 5-year category.' },
 
   { id: 'MW5.2', title: 'Auxiliary Brake (if equipped)', ref: 'A17.1 §6.2.5',
     desc: 'Test auxiliary brake on inclined moving walks where required.' },
@@ -2219,7 +2295,10 @@ movingwalk_cat5: [
 
   { id: 'MW5.4', title: 'Chain / Drive — Detailed Inspection', ref: 'A17.1 §6.2.3',
     desc: 'Pallet chain or belt drive inspection: elongation, wear, tensioning, sprocket / pulley condition.' }
-]
+],
+
+/* ---------- MOVING WALK CAT 5 (DEPRECATED — items merged into Cat 1 per A17.1 §8.11.4) ---------- */
+movingwalk_cat5: []
 
 };
 
@@ -3438,16 +3517,9 @@ const WIZARD_STEPS = {
   },
   2: {
     title: 'What code edition was the unit installed (or last altered) under?',
-    subtitle: 'Pick the code edition that governs this device. Use the most recent alteration date if the unit has been altered since installation.',
+    subtitle: 'Type the year shown on the data plate. Common verified editions are highlighted; any year is accepted.',
     summaryKey: 'jurisdiction',
-    options: () => [
-      { value: '2007', icon: '📕', title: 'A17.1-2007', desc: 'Multi-part numbering introduced. Citations not yet verified — sections shown will be marked FALLBACK.', badge: 'verify' },
-      { value: '2010', icon: '📕', title: 'A17.1-2010', desc: 'Pre-FFS revisions. Citations mostly stable to 2019 numbering.', badge: 'verify' },
-      { value: '2013', icon: '📗', title: 'A17.1-2013', desc: 'Major firefighters\' service revisions. Citations verified against actual PDF.', badge: 'verified' },
-      { value: '2016', icon: '📘', title: 'A17.1-2016', desc: 'Section numbering same as 2013. Citations inherited.', badge: 'verify' },
-      { value: '2019', icon: '📗', title: 'A17.1-2019', desc: '§2.27.1.1 revised in its entirety. Citations verified against actual PDF.', badge: 'verified' },
-      { value: '2022', icon: '📙', title: 'A17.1-2022', desc: 'Section numbering same as 2019 for most items. Citations not yet verified.', badge: 'verify' }
-    ]
+    customRender: 'yearPicker'
   },
   3: {
     title: 'What equipment are you inspecting?',
@@ -3466,6 +3538,12 @@ const WIZARD_STEPS = {
     subtitle: 'Pick the test category. Cat 1 = annual periodic test. Cat 5 = 5-year witnessed test with rated load.',
     summaryKey: 'equipment',
     options: () => {
+      // Escalators and moving walks have no separate Cat 5 — A17.1 §8.11.4 describes a single annual periodic inspection
+      if (state.tab === 'escalator' || state.tab === 'movingwalk') {
+        return [
+          { value: 'cat1', icon: '📅', title: 'Annual Inspection', desc: 'Per A17.1 §8.11.4, escalators and moving walks have a single annual periodic inspection (no separate 5-year category like elevators). Performance tests including brake stopping distance, governor trip, and step-chain pull are included in the annual.' }
+        ];
+      }
       const opts = [
         { value: 'cat1', icon: '📅', title: 'Category 1 — Annual', desc: 'Yearly periodic inspection. Operational tests, visual inspection, safety device function checks. Performed without rated load for most items.' }
       ];
@@ -3556,8 +3634,94 @@ function renderWizard() {
   }
 
   // Render options
-  const options = step.options();
   const optsEl = document.getElementById('wizardOptions');
+
+  if (step.customRender === 'yearPicker') {
+    // Custom year input + quick-pick buttons
+    const currentYear = state.wizardSelection || state.codeEdition || '2019';
+    const yearNum = parseInt(currentYear);
+    const isPreModern = !isNaN(yearNum) && yearNum < 2007;
+    const isVerified = currentYear === '2013' || currentYear === '2019';
+
+    optsEl.innerHTML = `
+      <div class="year-picker">
+        <label class="year-label">Code edition year (from data plate)</label>
+        <input type="text" id="yearInput" class="year-input" value="${currentYear}" placeholder="e.g., 2019, 1996, 1987" inputmode="numeric" />
+        <div class="year-status" id="yearStatus"></div>
+        <div class="year-chip-label">Quick pick — verified editions:</div>
+        <div class="year-chips">
+          <button type="button" class="year-chip verified" data-year="2013">A17.1-2013 ✓</button>
+          <button type="button" class="year-chip verified" data-year="2019">A17.1-2019 ✓</button>
+        </div>
+        <div class="year-chip-label">Other modern editions (citations inherited from nearest verified):</div>
+        <div class="year-chips">
+          <button type="button" class="year-chip" data-year="2022">2022</button>
+          <button type="button" class="year-chip" data-year="2016">2016</button>
+          <button type="button" class="year-chip" data-year="2010">2010</button>
+          <button type="button" class="year-chip" data-year="2007">2007</button>
+        </div>
+        <div class="year-chip-label">Pre-2007 editions (rule-based numbering — sections shown as fallback):</div>
+        <div class="year-chips">
+          <button type="button" class="year-chip warn" data-year="2004">2004</button>
+          <button type="button" class="year-chip warn" data-year="2002">2002</button>
+          <button type="button" class="year-chip warn" data-year="2000">2000</button>
+          <button type="button" class="year-chip warn" data-year="1996">1996</button>
+          <button type="button" class="year-chip warn" data-year="1993">1993</button>
+          <button type="button" class="year-chip warn" data-year="1990">1990</button>
+          <button type="button" class="year-chip warn" data-year="1987">1987</button>
+          <button type="button" class="year-chip warn" data-year="1984">1984</button>
+        </div>
+      </div>
+    `;
+
+    const input = document.getElementById('yearInput');
+    const statusEl = document.getElementById('yearStatus');
+
+    function updateYearStatus(year) {
+      const yn = parseInt(year);
+      if (isNaN(yn)) {
+        statusEl.innerHTML = '<span class="year-warn">Enter a 4-digit year (e.g., 2019)</span>';
+        document.getElementById('wizardNextBtn').disabled = true;
+        return false;
+      }
+      if (yn < 1955 || yn > 2030) {
+        statusEl.innerHTML = '<span class="year-warn">Year ' + yn + ' is outside the supported range (1955–2030)</span>';
+        document.getElementById('wizardNextBtn').disabled = true;
+        return false;
+      }
+      if (year === '2013' || year === '2019') {
+        statusEl.innerHTML = '<span class="year-ok">✓ Verified edition — A17.1-' + year + ' citations cross-checked against the actual PDF.</span>';
+      } else if (yn >= 2007 && yn <= 2022) {
+        statusEl.innerHTML = '<span class="year-info">Section numbering inherited from nearest verified edition (2013 or 2019). Field-verify specific sub-paragraphs.</span>';
+      } else if (yn < 2007) {
+        statusEl.innerHTML = '<span class="year-warn">⚠️ Pre-2007 editions use Rule-based numbering (e.g., Rule 211.3) instead of Section numbering. Tool will show the 2019 fallback section — you\u2019ll need to translate to the Rule format yourself when citing.</span>';
+      } else {
+        statusEl.innerHTML = '<span class="year-info">Year ' + yn + ' — citations using 2019 fallback.</span>';
+      }
+      state.wizardSelection = year;
+      document.getElementById('wizardNextBtn').disabled = false;
+      return true;
+    }
+
+    input.addEventListener('input', (e) => {
+      updateYearStatus(e.target.value.trim());
+    });
+
+    optsEl.querySelectorAll('.year-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const y = chip.dataset.year;
+        input.value = y;
+        updateYearStatus(y);
+      });
+    });
+
+    updateYearStatus(currentYear);
+
+    document.getElementById('wizardNextBtn').textContent = state.wizardStep === 4 ? 'Start Inspection →' : 'Next →';
+    return;
+  }
+
+  const options = step.options();
   optsEl.innerHTML = options.map(opt => `
     <button class="wizard-option" data-value="${opt.value}" onclick="selectWizardOption('${opt.value}')">
       <span class="opt-icon">${opt.icon}</span>
@@ -3659,10 +3823,10 @@ const PANEL_INFO = {
   traction_cat5: { title: 'TRACTION ELEVATOR — CATEGORY 5', meta: '5-YEAR · A17.1 §8.11.2.2' },
   mrl_cat1: { title: 'MRL ADDENDUM — CATEGORY 1', meta: 'ANNUAL · USE WITH TRACTION/HYDRAULIC ITEMS' },
   mrl_cat5: { title: 'MRL ADDENDUM — CATEGORY 5', meta: '5-YEAR · USE WITH TRACTION/HYDRAULIC ITEMS' },
-  escalator_cat1: { title: 'ESCALATOR — CATEGORY 1', meta: 'ANNUAL · A17.1 §8.11.5.1' },
-  escalator_cat5: { title: 'ESCALATOR — CATEGORY 5', meta: '5-YEAR · A17.1 §8.11.5.2' },
-  movingwalk_cat1: { title: 'MOVING WALK — CATEGORY 1', meta: 'ANNUAL · A17.1 §8.11.5' },
-  movingwalk_cat5: { title: 'MOVING WALK — CATEGORY 5', meta: '5-YEAR · A17.1 §8.11.5' }
+  escalator_cat1: { title: 'ESCALATOR — ANNUAL INSPECTION', meta: 'ALL ITEMS · A17.1 §8.11.4' },
+  escalator_cat5: { title: 'ESCALATOR — ANNUAL INSPECTION', meta: 'ALL ITEMS · A17.1 §8.11.4 (no separate Cat 5)' },
+  movingwalk_cat1: { title: 'MOVING WALK — ANNUAL INSPECTION', meta: 'ALL ITEMS · A17.1 §8.11.4' },
+  movingwalk_cat5: { title: 'MOVING WALK — ANNUAL INSPECTION', meta: 'ALL ITEMS · A17.1 §8.11.4 (no separate Cat 5)' }
 };
 
 /* ============================================================
@@ -3676,6 +3840,18 @@ function render() {
 
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === state.tab));
   document.querySelectorAll('.subtab').forEach(t => t.classList.toggle('active', t.dataset.cat === state.cat));
+
+  // Hide Cat 5 subtab for escalator/moving walk (no separate Cat 5 per A17.1 §8.11.4)
+  const isEscOrMW = state.tab === 'escalator' || state.tab === 'movingwalk';
+  const cat5Tab = document.querySelector('.subtab[data-cat="cat5"]');
+  const cat1Tab = document.querySelector('.subtab[data-cat="cat1"]');
+  if (cat5Tab) cat5Tab.style.display = isEscOrMW ? 'none' : '';
+  if (cat1Tab) cat1Tab.textContent = isEscOrMW ? 'ANNUAL INSPECTION' : 'CAT 1 — ANNUAL';
+  // Force cat to 'cat1' if user navigated to esc/mw while on cat5
+  if (isEscOrMW && state.cat === 'cat5') {
+    state.cat = 'cat1';
+    document.querySelector('.subtab[data-cat="cat1"]').classList.add('active');
+  }
 
   const list = document.getElementById('testList');
   const tests = currentTests();
